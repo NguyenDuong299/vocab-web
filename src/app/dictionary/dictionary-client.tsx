@@ -1,8 +1,13 @@
 "use client";
 
-import { SoundOutlined } from "@ant-design/icons";
+import {
+  CheckCircleFilled,
+  CloseCircleFilled,
+  MinusCircleFilled,
+  SoundOutlined,
+} from "@ant-design/icons";
 import { useMemo, useState } from "react";
-import { Alert, Button, Card, Col, Input, Row, Space, Statistic, Table, Tag, Typography, type TableColumnsType } from "antd";
+import { Alert, Button, Card, Col, Input, Row, Space, Statistic, Table, Typography, type TableColumnsType } from "antd";
 import { useRouter } from "next/navigation";
 import type { DictionaryReviewByItem, Lesson } from "./types";
 
@@ -122,26 +127,51 @@ export default function DictionaryClient({ initialLessons, initialReviewByItem }
       dataIndex: "answer",
       width: 260,
       align: "center",
-      render: (value: string, row) => {
-        const statusTag = row.isBlank ? (
-          <Tag className="mr-0!">EMPTY</Tag>
+      render: (_value: string, row) => {
+        const statusIcon = row.isBlank ? (
+          <MinusCircleFilled
+            aria-label="Chưa nhập đáp án"
+            style={{ color: "#94a3b8", fontSize: 18 }}
+          />
+        ) : row.isCorrect ? (
+          <CheckCircleFilled
+            aria-label="Đáp án đúng"
+            style={{ color: "#059669", fontSize: 18 }}
+          />
         ) : (
-          <Tag className="mr-0!" color={row.isCorrect ? "success" : "error"}>
-            {row.isCorrect ? "TRUE" : "FALSE"}
-          </Tag>
+          <CloseCircleFilled
+            aria-label="Đáp án sai"
+            style={{ color: "#ef4444", fontSize: 18 }}
+          />
         );
+        const answerBorderColor = row.isBlank
+          ? "#e2e8f0"
+          : row.isCorrect
+            ? "#10b981"
+            : "#ef4444";
 
         return (
           <Space.Compact style={{ width: "100%" }}>
             <Input
               readOnly
-              value={value}
+              value={row.answer}
               placeholder="Chưa làm"
+              aria-label={`Luyện tập từ ${row.hanzi}`}
               status={row.isBlank || row.isCorrect ? undefined : "error"}
-              className={row.isBlank ? "" : row.isCorrect ? "border-emerald-500 bg-emerald-50" : "bg-red-50"}
+              className={
+                row.isBlank
+                  ? ""
+                  : row.isCorrect
+                    ? "border-emerald-500 bg-emerald-50"
+                    : "bg-red-50"
+              }
+              style={{ borderColor: answerBorderColor }}
             />
-            <span className="flex min-w-20 items-center justify-center border border-l-0 border-slate-200 bg-white px-2">
-              {statusTag}
+            <span
+              className="flex w-12 shrink-0 items-center justify-center border border-l-0 bg-white px-2"
+              style={{ borderColor: answerBorderColor }}
+            >
+              {statusIcon}
             </span>
           </Space.Compact>
         );
