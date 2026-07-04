@@ -34,7 +34,7 @@ import {
   Typography,
   type TableColumnsType,
 } from "antd";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { pinyin } from "pinyin-pro";
 import {
   createVocabItemAction,
@@ -83,6 +83,7 @@ export default function VocabularyClient({
   initialFocusedVocabItemId,
 }: VocabularyClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [lessons, setLessons] = useState<Lesson[]>(initialLessons);
   const [activeLessonId, setActiveLessonId] = useState(
     resolveInitialLessonId(initialLessons, initialActiveLessonId),
@@ -120,8 +121,14 @@ export default function VocabularyClient({
   const [showPinyin, setShowPinyin] = useState(true);
   const [showMeaning, setShowMeaning] = useState(true);
   const [vocabularySearch, setVocabularySearch] = useState("");
+  const requestedLessonId = searchParams.get("lessonId") ?? initialActiveLessonId;
+  const focusedVocabItemId =
+    searchParams.get("vocabItemId") ?? initialFocusedVocabItemId;
   const activeLesson =
-    lessons.find((lesson) => lesson.id === activeLessonId) ?? lessons[0];
+    lessons.find((lesson) => lesson.id === requestedLessonId) ??
+    lessons.find((lesson) => lesson.id === activeLessonId) ??
+    lessons[0];
+  const resolvedActiveLessonId = activeLesson?.id ?? "";
   const activeLessonIndex = activeLesson
     ? lessons.findIndex((lesson) => lesson.id === activeLesson.id)
     : -1;
@@ -144,17 +151,17 @@ export default function VocabularyClient({
     translation.hanzi === normalizedNewHanzi && translation.isLoading;
 
   useEffect(() => {
-    if (!initialFocusedVocabItemId) return;
+    if (!focusedVocabItemId) return;
 
     const frameId = window.requestAnimationFrame(() => {
-      const escapedId = window.CSS.escape(initialFocusedVocabItemId);
+      const escapedId = window.CSS.escape(focusedVocabItemId);
       const row = document.querySelector(`[data-row-key="${escapedId}"]`);
 
       row?.scrollIntoView({ block: "center", behavior: "smooth" });
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [activeLessonId, initialFocusedVocabItemId]);
+  }, [focusedVocabItemId, resolvedActiveLessonId]);
 
   useEffect(() => {
     const hanzi = normalizeAnswer(newWord.hanzi);
@@ -363,6 +370,13 @@ export default function VocabularyClient({
 
     setLessons(nextLessons);
     setActiveLessonId(nextActiveLesson?.id ?? "");
+    if (nextActiveLesson) {
+      window.history.replaceState(
+        null,
+        "",
+        `/vocabulary?lessonId=${encodeURIComponent(nextActiveLesson.id)}`,
+      );
+    }
     setAnswersByLesson((current) => {
       const rest = { ...current };
 
@@ -831,7 +845,7 @@ export default function VocabularyClient({
               pagination={false}
               rowKey="id"
               rowClassName={(row) =>
-                row.id === initialFocusedVocabItemId ? "bg-emerald-50" : ""
+                row.id === focusedVocabItemId ? "bg-emerald-50" : ""
               }
               scroll={{ x: 1120 }}
               size="small"

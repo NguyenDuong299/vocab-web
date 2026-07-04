@@ -11,7 +11,7 @@ import { Button, Input, Layout, Modal, Typography } from "antd";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import {
   createLessonAction,
   reorderLessonsAction,
@@ -139,6 +139,25 @@ export function AppSidebar({
     setIsCreateLessonOpen(false);
     setNewLessonTitle("");
     setCreateLessonError("");
+  }
+
+  function selectLesson(event: MouseEvent<HTMLAnchorElement>, lessonId: string) {
+    if (
+      !pathname.startsWith("/vocabulary") ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    window.history.pushState(
+      null,
+      "",
+      `/vocabulary?lessonId=${encodeURIComponent(lessonId)}`,
+    );
   }
 
   async function reorderLessons(targetLessonId: string) {
@@ -290,6 +309,7 @@ export function AppSidebar({
                   >
                     <Link
                       href={`/vocabulary?lessonId=${encodeURIComponent(lesson.id)}`}
+                      onClick={(event) => selectLesson(event, lesson.id)}
                       className={`group flex min-h-14 w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors ${
                         isActive
                           ? "border-[#91caff] bg-[#e6f4ff] text-[#0958d9] shadow-sm"

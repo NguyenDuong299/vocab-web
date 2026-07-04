@@ -43,24 +43,14 @@ function mapLesson(row: LessonRow): Lesson {
   };
 }
 
-type VocabularyPageProps = {
-  searchParams: Promise<{
-    lessonId?: string;
-    vocabItemId?: string;
-  }>;
-};
-
-export default async function VocabularyPage({ searchParams }: VocabularyPageProps) {
-  const { lessonId, vocabItemId } = await searchParams;
+export default async function VocabularyPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    const nextPath = lessonId && vocabItemId ? `/vocabulary?lessonId=${lessonId}&vocabItemId=${vocabItemId}` : "/vocabulary";
-
-    redirect(`/login?next=${encodeURIComponent(nextPath)}`);
+    redirect(`/login?next=${encodeURIComponent("/vocabulary")}`);
   }
 
   const { data, error } = await supabase
@@ -118,11 +108,8 @@ export default async function VocabularyPage({ searchParams }: VocabularyPagePro
 
   return (
     <VocabularyClient
-      key={`${lessonId ?? ""}-${vocabItemId ?? ""}`}
       initialLessons={lessons}
       initialAnswersByLesson={initialAnswersByLesson}
-      initialActiveLessonId={lessonId}
-      initialFocusedVocabItemId={vocabItemId}
     />
   );
 }
