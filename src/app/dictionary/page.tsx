@@ -1,147 +1,100 @@
-"use client";
+import { redirect } from "next/navigation";
+import { createClient } from "@/utils/supabase/server";
+import DictionaryClient from "./dictionary-client";
+import type { DictionaryReviewByItem, Lesson } from "./types";
 
-import { useEffect, useMemo, useState } from "react";
-import { initialLessons, readStoredLessons, type Lesson } from "@/lib/vocab";
+type VocabItemRow = {
+  id: string;
+  hanzi: string;
+  pinyin: string;
+  meaning: string;
+  position: number | null;
+};
 
-function normalizeSearch(value: string) {
-  return value.trim().toLowerCase();
+type LessonRow = {
+  id: string;
+  title: string;
+  topic: string | null;
+  position: number | null;
+  vocab_items: VocabItemRow[] | null;
+};
+
+type ReviewAnswerRow = {
+  vocab_item_id: string;
+  answer: string;
+  is_correct: boolean;
+};
+
+function mapLesson(row: LessonRow): Lesson {
+  const vocabItems = [...(row.vocab_items ?? [])]
+    .sort((left, right) => (left.position ?? 0) - (right.position ?? 0))
+    .map((item, index) => ({
+      id: item.id,
+      hanzi: item.hanzi,
+      pinyin: item.pinyin,
+      meaning: item.meaning,
+      position: item.position ?? index + 1,
+    }));
+
+  return {
+    id: row.id,
+    title: row.title,
+    topic: row.topic ?? "Bài tự tạo",
+    vocabItems,
+  };
 }
 
-export default function DictionaryPage() {
-  const [lessons, setLessons] = useState<Lesson[]>(initialLessons);
-  const [query, setQuery] = useState("");
+export default async function DictionaryPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      try {
-        setLessons(readStoredLessons());
-      } catch {
-        setLessons(initialLessons);
-      }
-    }, 0);
+  if (!user) {
+    redirect("/login?next=/dictionary");
+  }
 
-    return () => window.clearTimeout(timeoutId);
-  }, []);
+  const { data, error } = await supabase
+    .from("vocab_lessons")
+    .select("id,title,topic,position,vocab_items(id,hanzi,pinyin,meaning,position)")
+    .eq("user_id", user.id)
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true });
 
-  const dictionaryRows = useMemo(
-    () =>
-      lessons.flatMap((lesson) =>
-        lesson.vocabItems.map((item) => ({
-          ...item,
-          lessonId: lesson.id,
-          lessonTitle: lesson.title,
-          lessonTopic: lesson.topic,
-        })),
-      ),
-    [lessons],
-  );
+  if (error) {
+    return (
+      <main style={{ minHeight: "100vh", padding: 24 }}>
+        Không tải được dữ liệu từ điển: {error.message}
+      </main>
+    );
+  }
 
-  const filteredRows = useMemo(() => {
-    const normalizedQuery = normalizeSearch(query);
+  const lessons = ((data ?? []) as LessonRow[]).map(mapLesson);
+  const vocabItemIds = lessons.flatMap((lesson) => lesson.vocabItems.map((item) => item.id));
+  const reviewByItem: DictionaryReviewByItem = {};
 
-    if (!normalizedQuery) return dictionaryRows;
+  if (vocabItemIds.length > 0) {
+    const { data: reviewAnswers, error: reviewError } = await supabase
+      .from("vocab_review_answers")
+      .select("vocab_item_id,answer,is_correct")
+      .eq("user_id", user.id)
+      .in("vocab_item_id", vocabItemIds);
 
-    return dictionaryRows.filter((row) => {
-      const searchableText = [
-        row.hanzi,
-        row.pinyin,
-        row.meaning,
-        row.lessonTitle,
-        row.lessonTopic,
-      ]
-        .join(" ")
-        .toLowerCase();
+    if (reviewError) {
+      return (
+        <main style={{ minHeight: "100vh", padding: 24 }}>
+          Không tải được dữ liệu check: {reviewError.message}
+        </main>
+      );
+    }
 
-      return searchableText.includes(normalizedQuery);
-    });
-  }, [dictionaryRows, query]);
+    for (const row of (reviewAnswers ?? []) as ReviewAnswerRow[]) {
+      reviewByItem[row.vocab_item_id] = {
+        answer: row.answer,
+        isCorrect: row.is_correct,
+      };
+    }
+  }
 
-  return (
-    <main className="min-h-screen bg-[#f3f6ef] px-3 py-4 text-slate-950 sm:px-6 lg:px-8">
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-4">
-        <div className="flex flex-col gap-3 border border-slate-300 bg-white p-4 shadow-sm sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
-              Tổng hợp tất cả bài
-            </p>
-            <h1 className="mt-1 text-3xl font-black tracking-normal text-slate-950">
-              Từ điển từ vựng
-            </h1>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <div className="border border-slate-300 bg-slate-50 px-3 py-2">
-              <p className="text-xs font-bold uppercase text-slate-500">Số bài</p>
-              <p className="text-2xl font-black">{lessons.length}</p>
-            </div>
-            <div className="border border-slate-300 bg-sky-50 px-3 py-2">
-              <p className="text-xs font-bold uppercase text-slate-500">Tổng từ</p>
-              <p className="text-2xl font-black">{dictionaryRows.length}</p>
-            </div>
-            <div className="border border-slate-300 bg-emerald-50 px-3 py-2">
-              <p className="text-xs font-bold uppercase text-slate-500">Đang hiện</p>
-              <p className="text-2xl font-black text-emerald-700">{filteredRows.length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="border border-slate-300 bg-white p-3 shadow-sm">
-          <label className="flex flex-col gap-1 text-sm font-bold text-slate-700">
-            Tìm kiếm
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              className="h-11 border border-slate-300 px-3 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
-              placeholder="Nhập chữ Hán, pinyin, nghĩa, hoặc tên bài"
-            />
-          </label>
-        </div>
-
-        <div className="overflow-hidden border border-slate-950 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] border-collapse text-center text-sm">
-              <thead>
-                <tr className="bg-[#fff4c7] text-slate-950">
-                  <th colSpan={6} className="border border-slate-950 px-3 py-2 text-xl font-black">
-                    TỪ ĐIỂN TỔNG HỢP
-                  </th>
-                </tr>
-                <tr>
-                  <th className="w-16 border border-slate-950 bg-white px-3 py-2 font-bold">STT</th>
-                  <th className="w-44 border border-slate-950 bg-orange-400 px-3 py-2 font-bold">BÀI</th>
-                  <th className="w-32 border border-slate-950 bg-orange-400 px-3 py-2 font-bold">
-                    CHỮ HÁN
-                  </th>
-                  <th className="w-44 border border-slate-950 bg-white px-3 py-2 font-bold">PINYIN</th>
-                  <th className="w-64 border border-slate-950 bg-white px-3 py-2 font-bold">NGHĨA</th>
-                  <th className="w-48 border border-slate-950 bg-white px-3 py-2 font-bold">CHỦ ĐỀ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((row, index) => (
-                  <tr key={`${row.lessonId}-${row.id}`} className="odd:bg-white even:bg-slate-50">
-                    <td className="border border-slate-950 px-3 py-1 font-medium">{index + 1}</td>
-                    <td className="border border-slate-950 px-3 py-1 font-bold text-slate-800">
-                      {row.lessonTitle}
-                    </td>
-                    <td className="border border-slate-950 px-3 py-1 text-xl font-semibold">{row.hanzi}</td>
-                    <td className="border border-slate-950 px-3 py-1 font-mono">{row.pinyin}</td>
-                    <td className="border border-slate-950 px-3 py-1">{row.meaning}</td>
-                    <td className="border border-slate-950 px-3 py-1">{row.lessonTopic}</td>
-                  </tr>
-                ))}
-                {filteredRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="border border-slate-950 bg-slate-50 px-3 py-8 font-bold text-slate-500">
-                      Không có từ vựng phù hợp.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-    </main>
-  );
+  return <DictionaryClient initialLessons={lessons} initialReviewByItem={reviewByItem} />;
 }

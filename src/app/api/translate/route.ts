@@ -14,7 +14,15 @@ export async function POST(request: Request) {
     return Response.json({ meaning: result.text });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Translation failed.";
+    const isRateLimited = message.toLowerCase().includes("too many requests");
 
-    return Response.json({ error: message }, { status: 500 });
+    return Response.json(
+      {
+        error: isRateLimited
+          ? "Dịch tự động đang bị giới hạn. Nhập nghĩa thủ công để tiếp tục."
+          : message,
+      },
+      { status: isRateLimited ? 429 : 500 },
+    );
   }
 }

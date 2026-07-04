@@ -1,0 +1,96 @@
+create table if not exists public.vocab_lessons (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null,
+  topic text not null default 'Bài tự tạo',
+  position integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+alter table public.vocab_lessons
+add column if not exists position integer;
+
+with ordered_lessons as (
+  select
+    id,
+    row_number() over (partition by user_id order by created_at, id) as next_position
+  from public.vocab_lessons
+  where position is null or position = 0
+)
+update public.vocab_lessons
+set position = ordered_lessons.next_position
+from ordered_lessons
+where vocab_lessons.id = ordered_lessons.id;
+
+alter table public.vocab_lessons
+alter column position set default 0;
+
+alter table public.vocab_lessons
+alter column position set not null;
+
+create table if not exists public.vocab_items (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  lesson_id uuid not null references public.vocab_lessons(id) on delete cascade,
+  hanzi text not null,
+  pinyin text not null,
+  meaning text not null,
+  position integer not null default 0,
+  created_at timestamptz not null default now(),
+  unique (user_id, lesson_id, hanzi)
+);
+
+create table if not exists public.vocab_review_answers (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  vocab_item_id uuid not null references public.vocab_items(id) on delete cascade,
+  answer text not null,
+  is_correct boolean not null,
+  updated_at timestamptz not null default now(),
+  unique (user_id, vocab_item_id)
+);
+
+alter table public.vocab_lessons enable row level security;
+alter table public.vocab_items enable row level security;
+alter table public.vocab_review_answers enable row level security;
+
+drop policy if exists "Users manage own lessons" on public.vocab_lessons;
+create policy "Users manage own lessons"
+on public.vocab_lessons
+for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "Users manage own vocab items" on public.vocab_items;
+create policy "Users manage own vocab items"
+on public.vocab_items
+for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "Users manage own review answers" on public.vocab_review_answers;
+create policy "Users manage own review answers"
+on public.vocab_review_answers
+for all
+using (auth.uid() = user_id)
+with check (
+  auth.uid() = user_id
+  and exists (
+    select 1
+    from public.vocab_items
+    where vocab_items.id = vocab_review_answers.vocab_item_id
+      and vocab_items.user_id = auth.uid()
+  )
+);
+
+create index if not exists vocab_lessons_user_created_idx
+on public.vocab_lessons (user_id, created_at);
+
+create index if not exists vocab_lessons_user_position_idx
+on public.vocab_lessons (user_id, position, created_at);
+
+create index if not exists vocab_items_lesson_position_idx
+on public.vocab_items (lesson_id, position, created_at);
+
+create index if not exists vocab_review_answers_user_item_idx
+on public.vocab_review_answers (user_id, vocab_item_id);
