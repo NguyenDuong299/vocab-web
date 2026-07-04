@@ -925,11 +925,6 @@ export default function VocabularyClient({
                         placeholder="Nhập nghĩa nếu dịch tự động lỗi"
                         value={newWord.meaning || generatedMeaning}
                       />
-                      {isGeneratingMeaning ? (
-                        <Typography.Text type="secondary" className="mt-1 block">
-                          Đang dịch...
-                        </Typography.Text>
-                      ) : null}
                     </Form.Item>
                   </Col>
                   <Col xs={24} lg={4}>
