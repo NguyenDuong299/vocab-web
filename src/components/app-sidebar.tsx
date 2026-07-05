@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  BookOutlined,
   HolderOutlined,
   PlusOutlined,
   ReadOutlined,
@@ -21,11 +20,6 @@ import { AppHeader } from "@/components/app-header";
 const { Sider, Content } = Layout;
 
 const navItems = [
-  {
-    key: "/vocabulary",
-    icon: <BookOutlined />,
-    label: "Từ vựng",
-  },
   {
     key: "/dictionary",
     icon: <ReadOutlined />,
