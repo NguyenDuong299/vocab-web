@@ -59,7 +59,14 @@ export default function DictionaryClient({ initialLessons, initialReviewByItem }
     if (!normalizedQuery) return dictionaryRows;
 
     return dictionaryRows.filter((row) => {
-      const searchableText = [row.hanzi, row.pinyin, row.meaning, row.lessonTitle, row.answer]
+      const searchableText = [
+        row.hanzi,
+        row.pinyin,
+        row.meaning,
+        row.example,
+        row.lessonTitle,
+        row.answer,
+      ]
         .join(" ")
         .toLowerCase();
 
@@ -102,12 +109,26 @@ export default function DictionaryClient({ initialLessons, initialReviewByItem }
     {
       title: "CHỮ HÁN",
       dataIndex: "hanzi",
-      width: 140,
+      width: 170,
       align: "center",
-      render: (value: string) => (
-        <Typography.Text className="text-xl" strong>
-          {value}
-        </Typography.Text>
+      render: (value: string, row) => (
+        <div className="flex w-full items-center justify-between gap-2">
+          <span className="min-w-0 flex-1 text-center">
+          <Typography.Text className="text-xl" strong>
+            {value}
+          </Typography.Text>
+          </span>
+          <Button
+            className="grid! size-8! place-items-center! rounded-full! border-sky-100! bg-sky-50! text-sky-600! shadow-sm transition! hover:border-sky-200! hover:bg-sky-100! hover:text-sky-700!"
+            icon={<SoundOutlined />}
+            onClick={(event) => {
+              event.stopPropagation();
+              playAudio(row.hanzi);
+            }}
+            aria-label={`Nghe phát âm ${row.hanzi}`}
+            size="small"
+          />
+        </div>
       ),
     },
     {
@@ -121,6 +142,12 @@ export default function DictionaryClient({ initialLessons, initialReviewByItem }
       title: "NGHĨA",
       dataIndex: "meaning",
       width: 300,
+    },
+    {
+      title: "VÍ DỤ",
+      dataIndex: "example",
+      width: 320,
+      render: (value: string) => value || "-",
     },
     {
       title: "LUYỆN TẬP",
@@ -177,22 +204,6 @@ export default function DictionaryClient({ initialLessons, initialReviewByItem }
         );
       },
     },
-    {
-      title: "AUDIO",
-      key: "audio",
-      width: 96,
-      align: "center",
-      render: (_value, row) => (
-        <Button
-          icon={<SoundOutlined />}
-          onClick={(event) => {
-            event.stopPropagation();
-            playAudio(row.hanzi);
-          }}
-          aria-label={`Nghe phát âm ${row.hanzi}`}
-        />
-      ),
-    },
   ];
 
   return (
@@ -230,7 +241,7 @@ export default function DictionaryClient({ initialLessons, initialReviewByItem }
             allowClear
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Nhập chữ Hán, pinyin, nghĩa, tên bài, hoặc đáp án đã check"
+            placeholder="Nhập chữ Hán, pinyin, nghĩa, ví dụ, tên bài, hoặc đáp án đã check"
             size="large"
           />
           {audioError ? <Alert className="mt-3" type="error" title={audioError} showIcon /> : null}
@@ -248,7 +259,7 @@ export default function DictionaryClient({ initialLessons, initialReviewByItem }
           })}
           rowClassName="cursor-pointer"
           rowKey={(row) => `${row.lessonId}-${row.id}`}
-          scroll={{ x: 1098 }}
+          scroll={{ x: 1352 }}
           size="middle"
           title={() => <Typography.Title level={3}>Từ điển tổng hợp</Typography.Title>}
           locale={{ emptyText: "Không có từ vựng phù hợp." }}

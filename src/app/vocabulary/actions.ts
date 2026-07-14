@@ -16,6 +16,7 @@ type VocabItemRow = {
   hanzi: string;
   pinyin: string;
   meaning: string;
+  example: string | null;
   position: number;
 };
 
@@ -233,12 +234,14 @@ export async function createVocabItemAction(input: {
   hanzi: string;
   pinyin: string;
   meaning: string;
+  example?: string;
   position: number;
 }): Promise<ActionResult<VocabItem>> {
   try {
     const hanzi = input.hanzi.trim().replace(/\s+/g, "");
     const pinyin = input.pinyin.trim();
     const meaning = input.meaning.trim();
+    const example = input.example?.trim() ?? "";
 
     if (!input.lessonId || !hanzi || !pinyin || !meaning) {
       return { ok: false, error: "Thiếu dữ liệu từ vựng." };
@@ -262,9 +265,10 @@ export async function createVocabItemAction(input: {
         hanzi,
         pinyin,
         meaning,
+        example,
         position: input.position,
       })
-      .select("id,hanzi,pinyin,meaning,position")
+      .select("id,hanzi,pinyin,meaning,example,position")
       .single<VocabItemRow>();
 
     if (error) {
@@ -285,6 +289,7 @@ export async function createVocabItemAction(input: {
         hanzi: data.hanzi,
         pinyin: data.pinyin,
         meaning: data.meaning,
+        example: data.example ?? "",
         position: data.position,
       },
     };
@@ -298,11 +303,13 @@ export async function updateVocabItemAction(input: {
   hanzi: string;
   pinyin: string;
   meaning: string;
+  example?: string;
 }): Promise<ActionResult<VocabItem>> {
   try {
     const hanzi = input.hanzi.trim().replace(/\s+/g, "");
     const pinyin = input.pinyin.trim();
     const meaning = input.meaning.trim();
+    const example = input.example?.trim() ?? "";
 
     if (!input.vocabItemId || !hanzi || !pinyin || !meaning) {
       return { ok: false, error: "Thiếu dữ liệu từ vựng." };
@@ -320,10 +327,10 @@ export async function updateVocabItemAction(input: {
 
     const { data, error } = await supabase
       .from("vocab_items")
-      .update({ hanzi, pinyin, meaning })
+      .update({ hanzi, pinyin, meaning, example })
       .eq("id", input.vocabItemId)
       .eq("user_id", user.id)
-      .select("id,hanzi,pinyin,meaning,position")
+      .select("id,hanzi,pinyin,meaning,example,position")
       .single<VocabItemRow>();
 
     if (error) {
@@ -344,6 +351,7 @@ export async function updateVocabItemAction(input: {
         hanzi: data.hanzi,
         pinyin: data.pinyin,
         meaning: data.meaning,
+        example: data.example ?? "",
         position: data.position,
       },
     };

@@ -8,6 +8,7 @@ type VocabItemRow = {
   hanzi: string;
   pinyin: string;
   meaning: string;
+  example: string | null;
   position: number | null;
 };
 
@@ -33,6 +34,7 @@ function mapLesson(row: LessonRow): Lesson {
       hanzi: item.hanzi,
       pinyin: item.pinyin,
       meaning: item.meaning,
+      example: item.example ?? "",
       position: item.position ?? index + 1,
     }));
 
@@ -56,7 +58,7 @@ export default async function DictionaryPage() {
 
   const { data, error } = await supabase
     .from("vocab_lessons")
-    .select("id,title,topic,position,vocab_items(id,hanzi,pinyin,meaning,position)")
+    .select("id,title,topic,position,vocab_items(id,hanzi,pinyin,meaning,example,position)")
     .eq("user_id", user.id)
     .order("position", { ascending: true })
     .order("created_at", { ascending: true });

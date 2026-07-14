@@ -95,6 +95,7 @@ export default function VocabularyClient({
   const [newWord, setNewWord] = useState({
     hanzi: "",
     meaning: "",
+    example: "",
   });
   const [translation, setTranslation] = useState({
     hanzi: "",
@@ -114,6 +115,7 @@ export default function VocabularyClient({
     hanzi: "",
     pinyin: "",
     meaning: "",
+    example: "",
   });
   const [editWordError, setEditWordError] = useState("");
   const [isSavingWord, setIsSavingWord] = useState(false);
@@ -246,7 +248,7 @@ export default function VocabularyClient({
     if (!keyword) return rows;
 
     return rows.filter((row) =>
-      [row.hanzi, row.pinyin, row.meaning, row.answer].some((value) =>
+      [row.hanzi, row.pinyin, row.meaning, row.example, row.answer].some((value) =>
         value.toLowerCase().includes(keyword),
       ),
     );
@@ -386,7 +388,7 @@ export default function VocabularyClient({
     });
     setIsEditingLessonTitle(false);
     setEditingLessonTitle("");
-    setNewWord({ hanzi: "", meaning: "" });
+    setNewWord({ hanzi: "", meaning: "", example: "" });
     setTranslation({ hanzi: "", meaning: "", isLoading: false });
     setFormError("");
     setPracticeError("");
@@ -426,6 +428,7 @@ export default function VocabularyClient({
       hanzi,
       pinyin: generatedPinyin,
       meaning: finalNewMeaning,
+      example: newWord.example.trim(),
       position: vocabItems.length + 1,
     });
 
@@ -446,7 +449,7 @@ export default function VocabularyClient({
         };
       }),
     );
-    setNewWord({ hanzi: "", meaning: "" });
+    setNewWord({ hanzi: "", meaning: "", example: "" });
     setTranslation({ hanzi: "", meaning: "", isLoading: false });
     setFormError("");
     router.refresh();
@@ -458,6 +461,7 @@ export default function VocabularyClient({
       hanzi: item.hanzi,
       pinyin: item.pinyin,
       meaning: item.meaning,
+      example: item.example,
     });
     setEditWordError("");
   }
@@ -466,7 +470,7 @@ export default function VocabularyClient({
     if (isSavingWord) return;
 
     setEditingVocabItem(null);
-    setEditWord({ hanzi: "", pinyin: "", meaning: "" });
+    setEditWord({ hanzi: "", pinyin: "", meaning: "", example: "" });
     setEditWordError("");
   }
 
@@ -476,6 +480,7 @@ export default function VocabularyClient({
     const hanzi = normalizeAnswer(editWord.hanzi);
     const pinyinValue = editWord.pinyin.trim();
     const meaning = editWord.meaning.trim();
+    const example = editWord.example.trim();
 
     if (!hanzi || !pinyinValue || !meaning) {
       setEditWordError("Nhập đủ chữ Hán, pinyin và nghĩa.");
@@ -501,6 +506,7 @@ export default function VocabularyClient({
       hanzi,
       pinyin: pinyinValue,
       meaning,
+      example,
     });
 
     setIsSavingWord(false);
@@ -523,7 +529,7 @@ export default function VocabularyClient({
       }),
     );
     setEditingVocabItem(null);
-    setEditWord({ hanzi: "", pinyin: "", meaning: "" });
+    setEditWord({ hanzi: "", pinyin: "", meaning: "", example: "" });
     router.refresh();
   }
 
@@ -576,10 +582,21 @@ export default function VocabularyClient({
     {
       title: "CHỮ HÁN",
       dataIndex: "hanzi",
-      width: 140,
+      width: 170,
       align: "center",
-      render: (value: string) => (
-        <Typography.Text strong>{value}</Typography.Text>
+      render: (value: string, row) => (
+        <div className="flex w-full items-center justify-between gap-2">
+          <span className="min-w-0 flex-1 text-center">
+          <Typography.Text strong>{value}</Typography.Text>
+          </span>
+          <Button
+            className="grid! size-8! place-items-center! rounded-full! border-sky-100! bg-sky-50! text-sky-600! shadow-sm transition! hover:border-sky-200! hover:bg-sky-100! hover:text-sky-700!"
+            icon={<SoundOutlined />}
+            onClick={() => playAudio(row.hanzi)}
+            aria-label={`Nghe phát âm từ số ${row.rowNumber}`}
+            size="small"
+          />
+        </div>
       ),
     },
     {
@@ -595,6 +612,12 @@ export default function VocabularyClient({
       width: 260,
       align: "center",
       render: (value: string) => (showMeaning ? value : "••••"),
+    },
+    {
+      title: "VÍ DỤ",
+      dataIndex: "example",
+      width: 320,
+      render: (value: string) => value || "-",
     },
     {
       title: "LUYỆN TẬP",
@@ -651,19 +674,6 @@ export default function VocabularyClient({
           </Space.Compact>
         );
       },
-    },
-    {
-      title: "AUDIO",
-      key: "audio",
-      width: 96,
-      align: "center",
-      render: (_value, row) => (
-        <Button
-          icon={<SoundOutlined />}
-          onClick={() => playAudio(row.hanzi)}
-          aria-label={`Nghe phát âm từ số ${row.rowNumber}`}
-        />
-      ),
     },
     {
       title: "THAO TÁC",
@@ -847,7 +857,7 @@ export default function VocabularyClient({
               rowClassName={(row) =>
                 row.id === focusedVocabItemId ? "bg-emerald-50" : ""
               }
-              scroll={{ x: 1120 }}
+              scroll={{ x: 1374 }}
               size="small"
               styles={{ header: { cell: { backgroundColor: "#F3F3F3" } } }}
               title={() => (
@@ -860,7 +870,7 @@ export default function VocabularyClient({
                       onChange={(event) =>
                         setVocabularySearch(event.target.value)
                       }
-                      placeholder="Tìm chữ Hán, pinyin, nghĩa, đáp án"
+                      placeholder="Tìm chữ Hán, pinyin, nghĩa, ví dụ, đáp án"
                       prefix={<SearchOutlined />}
                       value={vocabularySearch}
                     />
@@ -926,7 +936,7 @@ export default function VocabularyClient({
                       <Input readOnly value={generatedPinyin || "-"} />
                     </Form.Item>
                   </Col>
-                  <Col xs={24} lg={8}>
+                  <Col xs={24} lg={6}>
                     <Form.Item label="Nghĩa">
                       <Input
                         onChange={(event) => {
@@ -938,6 +948,21 @@ export default function VocabularyClient({
                         }}
                         placeholder="Nhập nghĩa nếu dịch tự động lỗi"
                         value={newWord.meaning || generatedMeaning}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} lg={6}>
+                    <Form.Item label="Ví dụ">
+                      <Input
+                        onChange={(event) => {
+                          setNewWord((current) => ({
+                            ...current,
+                            example: event.target.value,
+                          }));
+                          setFormError("");
+                        }}
+                        placeholder="Ví dụ tự nhập"
+                        value={newWord.example}
                       />
                     </Form.Item>
                   </Col>
@@ -1012,7 +1037,6 @@ export default function VocabularyClient({
           <Form.Item
             label="Nghĩa"
             validateStatus={editWordError ? "error" : undefined}
-            help={editWordError || undefined}
           >
             <Input
               onChange={(event) => {
@@ -1024,6 +1048,23 @@ export default function VocabularyClient({
               }}
               onPressEnter={saveEditedWord}
               value={editWord.meaning}
+            />
+          </Form.Item>
+          <Form.Item
+            label="Ví dụ"
+            validateStatus={editWordError ? "error" : undefined}
+            help={editWordError || undefined}
+          >
+            <Input
+              onChange={(event) => {
+                setEditWord((current) => ({
+                  ...current,
+                  example: event.target.value,
+                }));
+                setEditWordError("");
+              }}
+              onPressEnter={saveEditedWord}
+              value={editWord.example}
             />
           </Form.Item>
         </Form>

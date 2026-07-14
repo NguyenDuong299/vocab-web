@@ -35,10 +35,14 @@ create table if not exists public.vocab_items (
   hanzi text not null,
   pinyin text not null,
   meaning text not null,
+  example text not null default '',
   position integer not null default 0,
   created_at timestamptz not null default now(),
   unique (user_id, lesson_id, hanzi)
 );
+
+alter table public.vocab_items
+add column if not exists example text not null default '';
 
 create table if not exists public.vocab_review_answers (
   id uuid primary key default gen_random_uuid(),

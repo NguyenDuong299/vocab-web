@@ -3,6 +3,7 @@ export type VocabItem = {
   hanzi: string;
   pinyin: string;
   meaning: string;
+  example: string;
   position: number;
 };
 
