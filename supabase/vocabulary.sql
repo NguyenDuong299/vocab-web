@@ -54,9 +54,17 @@ create table if not exists public.vocab_review_answers (
   unique (user_id, vocab_item_id)
 );
 
+create table if not exists public.vocab_share_settings (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  public_id uuid not null unique default gen_random_uuid(),
+  is_public boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
 alter table public.vocab_lessons enable row level security;
 alter table public.vocab_items enable row level security;
 alter table public.vocab_review_answers enable row level security;
+alter table public.vocab_share_settings enable row level security;
 
 drop policy if exists "Users manage own lessons" on public.vocab_lessons;
 create policy "Users manage own lessons"
@@ -65,12 +73,38 @@ for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
+drop policy if exists "Anyone reads public lessons" on public.vocab_lessons;
+create policy "Anyone reads public lessons"
+on public.vocab_lessons
+for select
+using (
+  exists (
+    select 1
+    from public.vocab_share_settings
+    where vocab_share_settings.user_id = vocab_lessons.user_id
+      and vocab_share_settings.is_public
+  )
+);
+
 drop policy if exists "Users manage own vocab items" on public.vocab_items;
 create policy "Users manage own vocab items"
 on public.vocab_items
 for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
+
+drop policy if exists "Anyone reads public vocab items" on public.vocab_items;
+create policy "Anyone reads public vocab items"
+on public.vocab_items
+for select
+using (
+  exists (
+    select 1
+    from public.vocab_share_settings
+    where vocab_share_settings.user_id = vocab_items.user_id
+      and vocab_share_settings.is_public
+  )
+);
 
 drop policy if exists "Users manage own review answers" on public.vocab_review_answers;
 create policy "Users manage own review answers"
@@ -87,6 +121,19 @@ with check (
   )
 );
 
+drop policy if exists "Users manage own share settings" on public.vocab_share_settings;
+create policy "Users manage own share settings"
+on public.vocab_share_settings
+for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "Anyone reads public share settings" on public.vocab_share_settings;
+create policy "Anyone reads public share settings"
+on public.vocab_share_settings
+for select
+using (is_public);
+
 create index if not exists vocab_lessons_user_created_idx
 on public.vocab_lessons (user_id, created_at);
 
@@ -98,3 +145,7 @@ on public.vocab_items (lesson_id, position, created_at);
 
 create index if not exists vocab_review_answers_user_item_idx
 on public.vocab_review_answers (user_id, vocab_item_id);
+
+create index if not exists vocab_share_settings_public_idx
+on public.vocab_share_settings (public_id)
+where is_public;

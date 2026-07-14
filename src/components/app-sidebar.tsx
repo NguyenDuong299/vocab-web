@@ -16,6 +16,7 @@ import {
   reorderLessonsAction,
 } from "@/app/vocabulary/actions";
 import { AppHeader } from "@/components/app-header";
+import type { ShareSettings } from "@/components/app-header";
 
 const { Sider, Content } = Layout;
 
@@ -74,10 +75,12 @@ function getOrderedLessons(lessons: SidebarLesson[], lessonIds: string[]) {
 export function AppSidebar({
   children,
   lessons,
+  shareSettings,
   username,
 }: {
   children: ReactNode;
   lessons: SidebarLesson[];
+  shareSettings: ShareSettings | null;
   username: string | null;
 }) {
   const pathname = usePathname();
@@ -97,6 +100,7 @@ export function AppSidebar({
   const [dropTargetLessonId, setDropTargetLessonId] = useState<string | null>(null);
   const [reorderError, setReorderError] = useState("");
   const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
+  const isPublicSharePage = pathname.startsWith("/share/");
   const orderedLessons = getOrderedLessons(lessons, optimisticLessonIds);
 
   async function createLesson() {
@@ -182,7 +186,7 @@ export function AppSidebar({
     router.refresh();
   }
 
-  if (isAuthPage) {
+  if (isAuthPage || isPublicSharePage) {
     return children;
   }
 
@@ -352,7 +356,7 @@ export function AppSidebar({
         className="app-main-layout min-w-0 bg-[#f8fafc]"
         style={{ marginInlineStart: isMobileSidebar ? 0 : 282, minHeight: "100vh" }}
       >
-        <AppHeader username={username} />
+        <AppHeader initialShareSettings={shareSettings} username={username} />
         <Content className="min-w-0">{children}</Content>
       </Layout>
       <Modal

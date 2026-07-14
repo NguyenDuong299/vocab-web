@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "antd/dist/reset.css";
 import type { SidebarLesson } from "@/components/app-sidebar";
+import type { ShareSettings } from "@/components/app-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { createClient } from "@/utils/supabase/server";
 import "./globals.css";
@@ -29,6 +30,11 @@ type SidebarLessonRow = {
   vocab_items: { id: string }[] | null;
 };
 
+type ShareSettingsRow = {
+  public_id: string;
+  is_public: boolean;
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -43,6 +49,7 @@ export default async function RootLayout({
       ? user.user_metadata.username
       : (user?.email?.split("@")[0] ?? null);
   let lessons: SidebarLesson[] = [];
+  let shareSettings: ShareSettings | null = null;
 
   if (user) {
     const { data } = await supabase
@@ -58,6 +65,19 @@ export default async function RootLayout({
       topic: lesson.topic ?? "Bài tự tạo",
       wordCount: lesson.vocab_items?.length ?? 0,
     }));
+
+    const { data: settings } = await supabase
+      .from("vocab_share_settings")
+      .select("public_id,is_public")
+      .eq("user_id", user.id)
+      .maybeSingle<ShareSettingsRow>();
+
+    if (settings) {
+      shareSettings = {
+        publicId: settings.public_id,
+        isPublic: settings.is_public,
+      };
+    }
   }
 
   return (
@@ -66,7 +86,11 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <AppSidebar lessons={lessons} username={username}>
+        <AppSidebar
+          lessons={lessons}
+          shareSettings={shareSettings}
+          username={username}
+        >
           {children}
         </AppSidebar>
       </body>

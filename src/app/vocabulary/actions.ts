@@ -29,6 +29,11 @@ function normalizeAnswer(value: string) {
   return value.trim().replace(/\s+/g, "");
 }
 
+type ShareSettingsRow = {
+  public_id: string;
+  is_public: boolean;
+};
+
 export async function createLessonAction(title: string): Promise<ActionResult<Lesson>> {
   try {
     const cleanTitle = title.trim();
@@ -465,5 +470,63 @@ export async function saveReviewAnswerAction(input: {
     return { ok: true, data: { answer, isCorrect } };
   } catch (error) {
     return { ok: false, error: toMessage(error, "Không lưu được tiến độ.") };
+  }
+}
+
+export async function updateVocabularyPrivacyAction(
+  isPublic: boolean,
+): Promise<ActionResult<{ publicId: string; isPublic: boolean }>> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return { ok: false, error: "Bạn cần đăng nhập để đổi quyền riêng tư." };
+    }
+
+    const { data: existingSettings, error: existingError } = await supabase
+      .from("vocab_share_settings")
+      .select("public_id,is_public")
+      .eq("user_id", user.id)
+      .maybeSingle<ShareSettingsRow>();
+
+    if (existingError) {
+      return { ok: false, error: existingError.message };
+    }
+
+    const query = existingSettings
+      ? supabase
+          .from("vocab_share_settings")
+          .update({ is_public: isPublic, updated_at: new Date().toISOString() })
+          .eq("user_id", user.id)
+      : supabase
+          .from("vocab_share_settings")
+          .insert({ user_id: user.id, is_public: isPublic });
+
+    const { data, error } = await query
+      .select("public_id,is_public")
+      .single<ShareSettingsRow>();
+
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+
+    revalidatePath("/", "layout");
+
+    return {
+      ok: true,
+      data: {
+        publicId: data.public_id,
+        isPublic: data.is_public,
+      },
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: toMessage(error, "Không đổi được quyền riêng tư."),
+    };
   }
 }
