@@ -248,7 +248,7 @@ export async function createVocabItemAction(input: {
     const meaning = input.meaning.trim();
     const example = input.example?.trim() ?? "";
 
-    if (!input.lessonId || !hanzi || !pinyin || !meaning) {
+    if (!input.lessonId || !hanzi || !pinyin) {
       return { ok: false, error: "Thiếu dữ liệu từ vựng." };
     }
 
@@ -316,7 +316,7 @@ export async function updateVocabItemAction(input: {
     const meaning = input.meaning.trim();
     const example = input.example?.trim() ?? "";
 
-    if (!input.vocabItemId || !hanzi || !pinyin || !meaning) {
+    if (!input.vocabItemId || !hanzi || !pinyin) {
       return { ok: false, error: "Thiếu dữ liệu từ vựng." };
     }
 

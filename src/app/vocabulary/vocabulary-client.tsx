@@ -97,11 +97,6 @@ export default function VocabularyClient({
     meaning: "",
     example: "",
   });
-  const [translation, setTranslation] = useState({
-    hanzi: "",
-    meaning: "",
-    isLoading: false,
-  });
   const [formError, setFormError] = useState("");
   const [editLessonError, setEditLessonError] = useState("");
   const [practiceError, setPracticeError] = useState("");
@@ -145,12 +140,7 @@ export default function VocabularyClient({
 
     return pinyin(hanzi);
   }, [newWord.hanzi]);
-  const normalizedNewHanzi = normalizeAnswer(newWord.hanzi);
-  const generatedMeaning =
-    translation.hanzi === normalizedNewHanzi ? translation.meaning : "";
-  const finalNewMeaning = newWord.meaning.trim() || generatedMeaning;
-  const isGeneratingMeaning =
-    translation.hanzi === normalizedNewHanzi && translation.isLoading;
+  const finalNewMeaning = newWord.meaning.trim();
 
   useEffect(() => {
     if (!focusedVocabItemId) return;
@@ -164,56 +154,6 @@ export default function VocabularyClient({
 
     return () => window.cancelAnimationFrame(frameId);
   }, [focusedVocabItemId, resolvedActiveLessonId]);
-
-  useEffect(() => {
-    const hanzi = normalizeAnswer(newWord.hanzi);
-
-    if (!hanzi) {
-      return;
-    }
-
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(async () => {
-      setTranslation({ hanzi, meaning: "", isLoading: true });
-      setFormError("");
-
-      try {
-        const response = await fetch("/api/translate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: hanzi }),
-          signal: controller.signal,
-        });
-        const data = (await response.json()) as {
-          meaning?: string;
-          error?: string;
-        };
-
-        if (!response.ok || !data.meaning) {
-          throw new Error(data.error ?? "Không sinh được nghĩa.");
-        }
-
-        setNewWord((current) =>
-          normalizeAnswer(current.hanzi) === hanzi && !current.meaning.trim()
-            ? { ...current, meaning: data.meaning ?? "" }
-            : current,
-        );
-        setTranslation({ hanzi, meaning: data.meaning, isLoading: false });
-      } catch (error) {
-        if (controller.signal.aborted) return;
-
-        const message =
-          error instanceof Error ? error.message : "Không sinh được nghĩa.";
-        setTranslation({ hanzi, meaning: "", isLoading: false });
-        setFormError(message);
-      }
-    }, 350);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-      controller.abort();
-    };
-  }, [newWord.hanzi]);
 
   const rows = useMemo(
     () =>
@@ -389,7 +329,6 @@ export default function VocabularyClient({
     setIsEditingLessonTitle(false);
     setEditingLessonTitle("");
     setNewWord({ hanzi: "", meaning: "", example: "" });
-    setTranslation({ hanzi: "", meaning: "", isLoading: false });
     setFormError("");
     setPracticeError("");
     router.refresh();
@@ -405,13 +344,8 @@ export default function VocabularyClient({
       return;
     }
 
-    if (isGeneratingMeaning) {
-      setFormError("Đang sinh nghĩa, đợi một chút.");
-      return;
-    }
-
-    if (!generatedPinyin || !finalNewMeaning) {
-      setFormError("Chưa sinh được pinyin hoặc nghĩa.");
+    if (!generatedPinyin) {
+      setFormError("Chưa sinh được pinyin.");
       return;
     }
 
@@ -450,7 +384,6 @@ export default function VocabularyClient({
       }),
     );
     setNewWord({ hanzi: "", meaning: "", example: "" });
-    setTranslation({ hanzi: "", meaning: "", isLoading: false });
     setFormError("");
     router.refresh();
   }
@@ -482,8 +415,8 @@ export default function VocabularyClient({
     const meaning = editWord.meaning.trim();
     const example = editWord.example.trim();
 
-    if (!hanzi || !pinyinValue || !meaning) {
-      setEditWordError("Nhập đủ chữ Hán, pinyin và nghĩa.");
+    if (!hanzi || !pinyinValue) {
+      setEditWordError("Nhập đủ chữ Hán và pinyin.");
       return;
     }
 
@@ -946,8 +879,8 @@ export default function VocabularyClient({
                           }));
                           setFormError("");
                         }}
-                        placeholder="Nhập nghĩa nếu dịch tự động lỗi"
-                        value={newWord.meaning || generatedMeaning}
+                        placeholder="Nhập nghĩa tiếng Việt"
+                        value={newWord.meaning}
                       />
                     </Form.Item>
                   </Col>

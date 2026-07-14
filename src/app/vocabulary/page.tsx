@@ -110,6 +110,9 @@ export default async function VocabularyPage() {
 
   return (
     <VocabularyClient
+      key={lessons
+        .map((lesson) => `${lesson.id}:${lesson.title}:${lesson.vocabItems.length}`)
+        .join("|")}
       initialLessons={lessons}
       initialAnswersByLesson={initialAnswersByLesson}
     />

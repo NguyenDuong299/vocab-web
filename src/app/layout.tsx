@@ -48,6 +48,11 @@ export default async function RootLayout({
     typeof user?.user_metadata?.username === "string"
       ? user.user_metadata.username
       : (user?.email?.split("@")[0] ?? null);
+
+  if (user) {
+    console.log("Current Supabase user id:", user.id);
+  }
+
   let lessons: SidebarLesson[] = [];
   let shareSettings: ShareSettings | null = null;
 
