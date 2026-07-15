@@ -554,13 +554,13 @@ export default function VocabularyClient({
     {
       title: "STT",
       dataIndex: "rowNumber",
-      width: 72,
+      width: 56,
       align: "center",
     },
     {
       title: "CHỮ HÁN",
       dataIndex: "hanzi",
-      width: 170,
+      width: 148,
       align: "center",
       render: (value: string, row) => (
         <div className="flex w-full items-center justify-between gap-2">
@@ -580,27 +580,27 @@ export default function VocabularyClient({
     {
       title: "PINYIN",
       dataIndex: "pinyin",
-      width: 180,
+      width: 140,
       align: "center",
       render: (value: string) => (showPinyin ? value : "••••"),
     },
     {
       title: "NGHĨA",
       dataIndex: "meaning",
-      width: 260,
+      width: 180,
       align: "center",
       render: (value: string) => (showMeaning ? value : "••••"),
     },
     {
       title: "VÍ DỤ",
       dataIndex: "example",
-      width: 320,
+      width: 260,
       render: (value: string) => value || "-",
     },
     {
       title: "LUYỆN TẬP",
       dataIndex: "answer",
-      width: 260,
+      width: 220,
       align: "center",
       render: (_value: string, row) => {
         const statusIcon = row.isBlank ? (
@@ -656,7 +656,7 @@ export default function VocabularyClient({
     {
       title: "THAO TÁC",
       key: "actions",
-      width: 150,
+      width: 112,
       align: "center",
       fixed: "right",
       render: (_value, row) => (
@@ -835,7 +835,7 @@ export default function VocabularyClient({
               rowClassName={(row) =>
                 row.id === focusedVocabItemId ? "bg-emerald-50" : ""
               }
-              scroll={{ x: 1374 }}
+              scroll={{ x: 1116 }}
               size="small"
               styles={{ header: { cell: { backgroundColor: "#F3F3F3" } } }}
               title={() => (

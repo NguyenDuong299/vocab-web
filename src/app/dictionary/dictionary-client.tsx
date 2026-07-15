@@ -96,20 +96,20 @@ export default function DictionaryClient({ initialLessons, initialReviewByItem }
   const columns: TableColumnsType<DictionaryRow> = [
     {
       title: "STT",
-      width: 72,
+      width: 56,
       align: "center",
       render: (_value, _row, index) => index + 1,
     },
     {
       title: "BÀI",
       dataIndex: "lessonTitle",
-      width: 190,
+      width: 160,
       render: (value: string) => <Typography.Text strong>{value}</Typography.Text>,
     },
     {
       title: "CHỮ HÁN",
       dataIndex: "hanzi",
-      width: 170,
+      width: 148,
       align: "center",
       render: (value: string, row) => (
         <div className="flex w-full items-center justify-between gap-2">
@@ -134,25 +134,25 @@ export default function DictionaryClient({ initialLessons, initialReviewByItem }
     {
       title: "PINYIN",
       dataIndex: "pinyin",
-      width: 180,
+      width: 140,
       align: "center",
       render: (value: string) => <Typography.Text code>{value}</Typography.Text>,
     },
     {
       title: "NGHĨA",
       dataIndex: "meaning",
-      width: 300,
+      width: 180,
     },
     {
       title: "VÍ DỤ",
       dataIndex: "example",
-      width: 320,
+      width: 240,
       render: (value: string) => value || "-",
     },
     {
       title: "LUYỆN TẬP",
       dataIndex: "answer",
-      width: 260,
+      width: 220,
       align: "center",
       render: (_value: string, row) => {
         const statusIcon = row.isBlank ? (
@@ -249,6 +249,7 @@ export default function DictionaryClient({ initialLessons, initialReviewByItem }
 
         <Table<DictionaryRow>
           bordered
+          className="vocabulary-table"
           columns={columns}
           dataSource={filteredRows}
           pagination={{ pageSize: 20, showSizeChanger: true }}
@@ -259,8 +260,8 @@ export default function DictionaryClient({ initialLessons, initialReviewByItem }
           })}
           rowClassName="cursor-pointer"
           rowKey={(row) => `${row.lessonId}-${row.id}`}
-          scroll={{ x: 1352 }}
-          size="middle"
+          scroll={{ x: 1144 }}
+          size="small"
           title={() => <Typography.Title level={3}>Từ điển tổng hợp</Typography.Title>}
           locale={{ emptyText: "Không có từ vựng phù hợp." }}
         />

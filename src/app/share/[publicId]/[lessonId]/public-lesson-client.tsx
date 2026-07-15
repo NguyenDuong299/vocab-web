@@ -90,13 +90,13 @@ export default function PublicLessonClient({
     {
       title: "STT",
       dataIndex: "rowNumber",
-      width: 72,
+      width: 56,
       align: "center",
     },
     {
       title: "CHỮ HÁN",
       dataIndex: "hanzi",
-      width: 170,
+      width: 148,
       align: "center",
       render: (value: string, row) => (
         <div className="flex w-full items-center justify-between gap-2">
@@ -118,19 +118,19 @@ export default function PublicLessonClient({
     {
       title: "PINYIN",
       dataIndex: "pinyin",
-      width: 180,
+      width: 140,
       align: "center",
       render: (value: string) => <Typography.Text code>{value}</Typography.Text>,
     },
     {
       title: "NGHĨA",
       dataIndex: "meaning",
-      width: 300,
+      width: 180,
     },
     {
       title: "VÍ DỤ",
       dataIndex: "example",
-      width: 360,
+      width: 260,
       render: (value: string) => value || "-",
     },
   ];
@@ -177,12 +177,13 @@ export default function PublicLessonClient({
         {rows.length > 0 ? (
           <Table<PublicLessonRow>
             bordered
+            className="vocabulary-table"
             columns={columns}
             dataSource={filteredRows}
             pagination={false}
             rowKey="id"
-            scroll={{ x: 1082 }}
-            size="middle"
+            scroll={{ x: 784 }}
+            size="small"
             locale={{ emptyText: "Không có từ vựng phù hợp." }}
           />
         ) : (
