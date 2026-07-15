@@ -17,7 +17,7 @@ import {
   SearchOutlined,
   SoundOutlined,
 } from "@ant-design/icons";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Button,
@@ -32,6 +32,7 @@ import {
   Space,
   Table,
   Typography,
+  type InputRef,
   type TableColumnsType,
 } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -52,6 +53,8 @@ function normalizeAnswer(value: string) {
 
 const emptyAnswers: Record<string, string> = {};
 const emptyVocabItems: Lesson["vocabItems"] = [];
+const FOCUS_NEW_WORD_HANZI_KEY = "vocab-web:focus-new-word-hanzi";
+const NEW_WORD_HANZI_INPUT_ID = "new-word-hanzi-input";
 
 type PracticeRow = Lesson["vocabItems"][number] & {
   answer: string;
@@ -84,6 +87,7 @@ export default function VocabularyClient({
 }: VocabularyClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const newWordHanziInputRef = useRef<InputRef>(null);
   const [lessons, setLessons] = useState<Lesson[]>(initialLessons);
   const [activeLessonId, setActiveLessonId] = useState(
     resolveInitialLessonId(initialLessons, initialActiveLessonId),
@@ -154,6 +158,46 @@ export default function VocabularyClient({
 
     return () => window.cancelAnimationFrame(frameId);
   }, [focusedVocabItemId, resolvedActiveLessonId]);
+
+  useEffect(() => {
+    if (
+      window.sessionStorage.getItem(FOCUS_NEW_WORD_HANZI_KEY) !== "true"
+    ) {
+      return;
+    }
+
+    let timeoutId: number | undefined;
+    let attempts = 0;
+
+    const focusUntilActive = () => {
+      attempts += 1;
+
+      newWordHanziInputRef.current?.focus();
+
+      const inputElement = document.getElementById(
+        NEW_WORD_HANZI_INPUT_ID,
+      ) as HTMLInputElement | null;
+
+      inputElement?.focus();
+
+      if (attempts >= 20) {
+        window.sessionStorage.removeItem(FOCUS_NEW_WORD_HANZI_KEY);
+        return;
+      }
+
+      timeoutId = window.setTimeout(focusUntilActive, 100);
+    };
+
+    const frameId = window.requestAnimationFrame(focusUntilActive);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [newWord.hanzi, resolvedActiveLessonId, vocabItems.length]);
 
   const rows = useMemo(
     () =>
@@ -385,6 +429,7 @@ export default function VocabularyClient({
     );
     setNewWord({ hanzi: "", meaning: "", example: "" });
     setFormError("");
+    window.sessionStorage.setItem(FOCUS_NEW_WORD_HANZI_KEY, "true");
     router.refresh();
   }
 
@@ -852,6 +897,8 @@ export default function VocabularyClient({
                   <Col xs={24} lg={6}>
                     <Form.Item label="Chữ Hán">
                       <Input
+                        id={NEW_WORD_HANZI_INPUT_ID}
+                        ref={newWordHanziInputRef}
                         value={newWord.hanzi}
                         onChange={(event) => {
                           setNewWord((current) => ({
