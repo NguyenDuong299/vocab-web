@@ -580,9 +580,16 @@ export default function VocabularyClient({
     {
       title: "PINYIN",
       dataIndex: "pinyin",
-      width: 140,
+      width: 180,
       align: "center",
-      render: (value: string) => (showPinyin ? value : "••••"),
+      render: (value: string) =>
+        showPinyin ? (
+          <Typography.Text className="block whitespace-normal break-words leading-6">
+            {value}
+          </Typography.Text>
+        ) : (
+          "••••"
+        ),
     },
     {
       title: "NGHĨA",
@@ -913,7 +920,12 @@ export default function VocabularyClient({
                   </Col>
                   <Col xs={24} lg={6}>
                     <Form.Item label="Pinyin tự sinh">
-                      <Input readOnly value={generatedPinyin || "-"} />
+                      <div
+                        aria-live="polite"
+                        className="min-h-8 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 leading-6 text-slate-700 whitespace-normal break-words"
+                      >
+                        {generatedPinyin || "-"}
+                      </div>
                     </Form.Item>
                   </Col>
                   <Col xs={24} lg={6}>
