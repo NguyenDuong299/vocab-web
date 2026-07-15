@@ -41,6 +41,7 @@ import {
   createVocabItemAction,
   deleteLessonAction,
   deleteVocabItemAction,
+  reorderVocabItemsAction,
   saveReviewAnswerAction,
   updateLessonTitleAction,
   updateVocabItemAction,
@@ -49,6 +50,26 @@ import type { AnswersByLesson, Lesson } from "./types";
 
 function normalizeAnswer(value: string) {
   return value.trim().replace(/\s+/g, "");
+}
+
+function reorderById<T extends { id: string }>(
+  items: T[],
+  sourceId: string,
+  targetId: string,
+) {
+  const sourceIndex = items.findIndex((item) => item.id === sourceId);
+  const targetIndex = items.findIndex((item) => item.id === targetId);
+
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) {
+    return items;
+  }
+
+  const nextItems = [...items];
+  const [movedItem] = nextItems.splice(sourceIndex, 1);
+
+  nextItems.splice(targetIndex, 0, movedItem);
+
+  return nextItems;
 }
 
 const emptyAnswers: Record<string, string> = {};
@@ -122,6 +143,9 @@ export default function VocabularyClient({
   const [showPinyin, setShowPinyin] = useState(true);
   const [showMeaning, setShowMeaning] = useState(true);
   const [vocabularySearch, setVocabularySearch] = useState("");
+  const [draggedVocabItemId, setDraggedVocabItemId] = useState("");
+  const [dragOverVocabItemId, setDragOverVocabItemId] = useState("");
+  const [isReorderingVocabItems, setIsReorderingVocabItems] = useState(false);
   const requestedLessonId = searchParams.get("lessonId") ?? initialActiveLessonId;
   const focusedVocabItemId =
     searchParams.get("vocabItemId") ?? initialFocusedVocabItemId;
@@ -237,6 +261,59 @@ export default function VocabularyClient({
       ),
     );
   }, [rows, vocabularySearch]);
+  const canReorderVocabItems =
+    !vocabularySearch.trim() && !isReorderingVocabItems && rows.length > 1;
+
+  async function reorderVocabItems(sourceId: string, targetId: string) {
+    if (
+      !activeLesson ||
+      sourceId === targetId ||
+      isReorderingVocabItems ||
+      vocabularySearch.trim()
+    ) {
+      return;
+    }
+
+    const nextVocabItems = reorderById(
+      activeLesson.vocabItems,
+      sourceId,
+      targetId,
+    );
+
+    if (nextVocabItems === activeLesson.vocabItems) return;
+
+    const reorderedVocabItems = nextVocabItems.map((item, index) => ({
+      ...item,
+      position: index + 1,
+    }));
+
+    const previousLessons = lessons;
+
+    setLessons((current) =>
+      current.map((lesson) =>
+        lesson.id === activeLesson.id
+          ? { ...lesson, vocabItems: reorderedVocabItems }
+          : lesson,
+      ),
+    );
+    setIsReorderingVocabItems(true);
+    setPracticeError("");
+
+    const result = await reorderVocabItemsAction({
+      lessonId: activeLesson.id,
+      vocabItemIds: reorderedVocabItems.map((item) => item.id),
+    });
+
+    setIsReorderingVocabItems(false);
+
+    if (!result.ok) {
+      setLessons(previousLessons);
+      setPracticeError(result.error);
+      return;
+    }
+
+    router.refresh();
+  }
 
   function updateAnswer(id: string, value: string) {
     if (!activeLesson) return;
@@ -840,8 +917,53 @@ export default function VocabularyClient({
               pagination={false}
               rowKey="id"
               rowClassName={(row) =>
-                row.id === focusedVocabItemId ? "bg-emerald-50" : ""
+                [
+                  row.id === focusedVocabItemId ? "bg-emerald-50" : "",
+                  row.id === dragOverVocabItemId
+                    ? "outline outline-2 outline-sky-300"
+                    : "",
+                  canReorderVocabItems ? "cursor-grab" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")
               }
+              onRow={(row) => ({
+                draggable: canReorderVocabItems,
+                onDragStart: (event) => {
+                  if (!canReorderVocabItems) return;
+
+                  setDraggedVocabItemId(row.id);
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("text/plain", row.id);
+                },
+                onDragOver: (event) => {
+                  if (!canReorderVocabItems || !draggedVocabItemId) return;
+
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                  setDragOverVocabItemId(row.id);
+                },
+                onDragLeave: () => {
+                  setDragOverVocabItemId((current) =>
+                    current === row.id ? "" : current,
+                  );
+                },
+                onDrop: async (event) => {
+                  event.preventDefault();
+
+                  const sourceId =
+                    draggedVocabItemId ||
+                    event.dataTransfer.getData("text/plain");
+
+                  setDraggedVocabItemId("");
+                  setDragOverVocabItemId("");
+                  await reorderVocabItems(sourceId, row.id);
+                },
+                onDragEnd: () => {
+                  setDraggedVocabItemId("");
+                  setDragOverVocabItemId("");
+                },
+              })}
               scroll={{ x: 1116 }}
               size="small"
               styles={{ header: { cell: { backgroundColor: "#F3F3F3" } } }}
@@ -888,6 +1010,13 @@ export default function VocabularyClient({
                   </div>
                   {practiceError ? (
                     <Alert type="error" title={practiceError} showIcon />
+                  ) : null}
+                  {vocabularySearch.trim() && rows.length > 1 ? (
+                    <Alert
+                      type="info"
+                      title="Xóa tìm kiếm để kéo thả sắp xếp toàn bộ từ trong bài."
+                      showIcon
+                    />
                   ) : null}
                 </div>
               )}

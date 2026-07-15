@@ -303,6 +303,73 @@ export async function createVocabItemAction(input: {
   }
 }
 
+export async function reorderVocabItemsAction(input: {
+  lessonId: string;
+  vocabItemIds: string[];
+}): Promise<ActionResult<{ vocabItemIds: string[] }>> {
+  try {
+    const uniqueVocabItemIds = Array.from(new Set(input.vocabItemIds));
+
+    if (
+      !input.lessonId ||
+      uniqueVocabItemIds.length === 0 ||
+      uniqueVocabItemIds.length !== input.vocabItemIds.length
+    ) {
+      return { ok: false, error: "Thứ tự từ vựng không hợp lệ." };
+    }
+
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return { ok: false, error: "Bạn cần đăng nhập để sắp xếp từ." };
+    }
+
+    const { data: ownedItems, error: ownedError } = await supabase
+      .from("vocab_items")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("lesson_id", input.lessonId);
+
+    if (ownedError) {
+      return { ok: false, error: ownedError.message };
+    }
+
+    const ownedItemIds = new Set((ownedItems ?? []).map((item) => item.id));
+
+    if (
+      ownedItemIds.size !== uniqueVocabItemIds.length ||
+      uniqueVocabItemIds.some((vocabItemId) => !ownedItemIds.has(vocabItemId))
+    ) {
+      return { ok: false, error: "Không tìm thấy đủ từ cần sắp xếp." };
+    }
+
+    for (const [index, vocabItemId] of uniqueVocabItemIds.entries()) {
+      const { error } = await supabase
+        .from("vocab_items")
+        .update({ position: index + 1 })
+        .eq("id", vocabItemId)
+        .eq("lesson_id", input.lessonId)
+        .eq("user_id", user.id);
+
+      if (error) {
+        return { ok: false, error: error.message };
+      }
+    }
+
+    revalidatePath("/", "layout");
+    revalidatePath("/vocabulary");
+    revalidatePath("/dictionary");
+
+    return { ok: true, data: { vocabItemIds: uniqueVocabItemIds } };
+  } catch (error) {
+    return { ok: false, error: toMessage(error, "Không sắp xếp được từ.") };
+  }
+}
+
 export async function updateVocabItemAction(input: {
   vocabItemId: string;
   hanzi: string;
