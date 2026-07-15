@@ -52,6 +52,17 @@ function normalizeAnswer(value: string) {
   return value.trim().replace(/\s+/g, "");
 }
 
+function isInteractiveTarget(target: EventTarget | null) {
+  return (
+    target instanceof HTMLElement &&
+    Boolean(
+      target.closest(
+        'a,button,input,textarea,select,[contenteditable="true"],[role="button"]',
+      ),
+    )
+  );
+}
+
 function reorderById<T extends { id: string }>(
   items: T[],
   sourceId: string,
@@ -111,6 +122,7 @@ export default function VocabularyClient({
   const newWordHanziInputRef = useRef<InputRef>(null);
   const meaningBeforeEditRef = useRef<Record<string, string>>({});
   const savingMeaningVocabItemIdRef = useRef("");
+  const didDragVocabItemRef = useRef(false);
   const [lessons, setLessons] = useState<Lesson[]>(initialLessons);
   const [activeLessonId, setActiveLessonId] = useState(
     resolveInitialLessonId(initialLessons, initialActiveLessonId),
@@ -587,7 +599,7 @@ export default function VocabularyClient({
   }
 
   function closeEditWordModal() {
-    if (isSavingWord) return;
+    if (isSavingWord || deletingVocabItemId) return;
 
     setEditingVocabItem(null);
     setEditWord({ hanzi: "", pinyin: "", meaning: "", example: "" });
@@ -658,6 +670,7 @@ export default function VocabularyClient({
 
     setDeletingVocabItemId(item.id);
     setPracticeError("");
+    setEditWordError("");
 
     const result = await deleteVocabItemAction(item.id);
 
@@ -665,6 +678,7 @@ export default function VocabularyClient({
 
     if (!result.ok) {
       setPracticeError(result.error);
+      setEditWordError(result.error);
       return;
     }
 
@@ -689,6 +703,11 @@ export default function VocabularyClient({
 
       return { ...current, [activeLesson.id]: nextAnswers };
     });
+    if (editingVocabItem?.id === result.data.id) {
+      setEditingVocabItem(null);
+      setEditWord({ hanzi: "", pinyin: "", meaning: "", example: "" });
+      setEditWordError("");
+    }
     router.refresh();
   }
 
@@ -817,40 +836,6 @@ export default function VocabularyClient({
           </Space.Compact>
         );
       },
-    },
-    {
-      title: "THAO TÁC",
-      key: "actions",
-      width: 112,
-      align: "center",
-      fixed: "right",
-      render: (_value, row) => (
-        <Space>
-          <Button
-            aria-label={`Sửa từ ${row.hanzi}`}
-            icon={<EditOutlined />}
-            onClick={() => startEditingWord(row)}
-          />
-          <Popconfirm
-            cancelText="Hủy"
-            description="Đáp án luyện tập của từ này cũng sẽ bị xóa."
-            okButtonProps={{
-              danger: true,
-              loading: deletingVocabItemId === row.id,
-            }}
-            okText="Xóa"
-            onConfirm={() => deleteWord(row)}
-            title="Xóa từ vựng này?"
-          >
-            <Button
-              aria-label={`Xóa từ ${row.hanzi}`}
-              danger
-              icon={<DeleteOutlined />}
-              loading={deletingVocabItemId === row.id}
-            />
-          </Popconfirm>
-        </Space>
-      ),
     },
   ];
 
@@ -1003,16 +988,27 @@ export default function VocabularyClient({
                   row.id === dragOverVocabItemId
                     ? "outline outline-2 outline-sky-300"
                     : "",
-                  canReorderVocabItems ? "cursor-grab" : "",
+                  "cursor-pointer",
                 ]
                   .filter(Boolean)
                   .join(" ")
               }
               onRow={(row) => ({
                 draggable: canReorderVocabItems,
+                onClick: (event) => {
+                  if (
+                    didDragVocabItemRef.current ||
+                    isInteractiveTarget(event.target)
+                  ) {
+                    return;
+                  }
+
+                  startEditingWord(row);
+                },
                 onDragStart: (event) => {
                   if (!canReorderVocabItems) return;
 
+                  didDragVocabItemRef.current = true;
                   setDraggedVocabItemId(row.id);
                   event.dataTransfer.effectAllowed = "move";
                   event.dataTransfer.setData("text/plain", row.id);
@@ -1043,9 +1039,12 @@ export default function VocabularyClient({
                 onDragEnd: () => {
                   setDraggedVocabItemId("");
                   setDragOverVocabItemId("");
+                  window.setTimeout(() => {
+                    didDragVocabItemRef.current = false;
+                  }, 100);
                 },
               })}
-              scroll={{ x: 1116 }}
+              scroll={{ x: 1052 }}
               size="small"
               styles={{ header: { cell: { backgroundColor: "#F3F3F3" } } }}
               title={() => (
@@ -1196,11 +1195,53 @@ export default function VocabularyClient({
       </Space>
       <Modal
         confirmLoading={isSavingWord}
-        okText="Lưu"
         onCancel={closeEditWordModal}
         onOk={saveEditedWord}
         open={Boolean(editingVocabItem)}
         title="Chỉnh sửa từ vựng"
+        footer={
+          <div className="flex items-center justify-between gap-3">
+            {editingVocabItem ? (
+              <Popconfirm
+                cancelText="Hủy"
+                description="Đáp án luyện tập của từ này cũng sẽ bị xóa."
+                okButtonProps={{
+                  danger: true,
+                  loading: deletingVocabItemId === editingVocabItem.id,
+                }}
+                okText="Xóa"
+                onConfirm={() => deleteWord(editingVocabItem)}
+                title="Xóa từ vựng này?"
+              >
+                <Button
+                  aria-label={`Xóa từ ${editingVocabItem.hanzi}`}
+                  danger
+                  icon={<DeleteOutlined />}
+                  loading={deletingVocabItemId === editingVocabItem.id}
+                >
+                  Xóa từ
+                </Button>
+              </Popconfirm>
+            ) : (
+              <span />
+            )}
+            <Space>
+              <Button
+                disabled={isSavingWord || Boolean(deletingVocabItemId)}
+                onClick={closeEditWordModal}
+              >
+                Hủy
+              </Button>
+              <Button
+                loading={isSavingWord}
+                onClick={saveEditedWord}
+                type="primary"
+              >
+                Lưu
+              </Button>
+            </Space>
+          </div>
+        }
       >
         <Form layout="vertical">
           <Form.Item
