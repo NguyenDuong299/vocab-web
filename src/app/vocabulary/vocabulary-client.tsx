@@ -109,6 +109,8 @@ export default function VocabularyClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const newWordHanziInputRef = useRef<InputRef>(null);
+  const meaningBeforeEditRef = useRef<Record<string, string>>({});
+  const savingMeaningVocabItemIdRef = useRef("");
   const [lessons, setLessons] = useState<Lesson[]>(initialLessons);
   const [activeLessonId, setActiveLessonId] = useState(
     resolveInitialLessonId(initialLessons, initialActiveLessonId),
@@ -146,6 +148,7 @@ export default function VocabularyClient({
   const [draggedVocabItemId, setDraggedVocabItemId] = useState("");
   const [dragOverVocabItemId, setDragOverVocabItemId] = useState("");
   const [isReorderingVocabItems, setIsReorderingVocabItems] = useState(false);
+  const [savingMeaningVocabItemId, setSavingMeaningVocabItemId] = useState("");
   const requestedLessonId = searchParams.get("lessonId") ?? initialActiveLessonId;
   const focusedVocabItemId =
     searchParams.get("vocabItemId") ?? initialFocusedVocabItemId;
@@ -339,6 +342,68 @@ export default function VocabularyClient({
     }
 
     setPracticeError("");
+  }
+
+  function updateMeaning(id: string, value: string) {
+    if (!activeLesson) return;
+
+    setLessons((current) =>
+      current.map((lesson) => {
+        if (lesson.id !== activeLesson.id) return lesson;
+
+        return {
+          ...lesson,
+          vocabItems: lesson.vocabItems.map((item) =>
+            item.id === id ? { ...item, meaning: value } : item,
+          ),
+        };
+      }),
+    );
+  }
+
+  async function saveMeaning(row: PracticeRow) {
+    if (
+      savingMeaningVocabItemIdRef.current ||
+      meaningBeforeEditRef.current[row.id] === row.meaning
+    ) {
+      return;
+    }
+
+    savingMeaningVocabItemIdRef.current = row.id;
+    setSavingMeaningVocabItemId(row.id);
+    setPracticeError("");
+
+    const result = await updateVocabItemAction({
+      vocabItemId: row.id,
+      hanzi: row.hanzi,
+      pinyin: row.pinyin,
+      meaning: row.meaning,
+      example: row.example,
+    });
+
+    savingMeaningVocabItemIdRef.current = "";
+    setSavingMeaningVocabItemId("");
+
+    if (!result.ok) {
+      setPracticeError(result.error);
+      return;
+    }
+
+    setLessons((current) =>
+      current.map((lesson) => {
+        if (lesson.id !== activeLesson?.id) return lesson;
+
+        return {
+          ...lesson,
+          vocabItems: lesson.vocabItems.map((item) =>
+            item.id === result.data.id ? result.data : item,
+          ),
+        };
+      }),
+    );
+    meaningBeforeEditRef.current[row.id] = result.data.meaning;
+    setPracticeError("");
+    router.refresh();
   }
 
   function playAudio(text: string) {
@@ -673,7 +738,23 @@ export default function VocabularyClient({
       dataIndex: "meaning",
       width: 180,
       align: "center",
-      render: (value: string) => (showMeaning ? value : "••••"),
+      render: (_value: string, row) =>
+        showMeaning ? (
+          <Input
+            aria-label={`Nghĩa của từ số ${row.rowNumber}`}
+            disabled={savingMeaningVocabItemId === row.id}
+            onBlur={() => saveMeaning(row)}
+            onChange={(event) => updateMeaning(row.id, event.target.value)}
+            onFocus={() => {
+              meaningBeforeEditRef.current[row.id] = row.meaning;
+            }}
+            onPressEnter={() => saveMeaning(row)}
+            placeholder="Nhập nghĩa"
+            value={row.meaning}
+          />
+        ) : (
+          "••••"
+        ),
     },
     {
       title: "VÍ DỤ",
@@ -1153,22 +1234,6 @@ export default function VocabularyClient({
               }}
               onPressEnter={saveEditedWord}
               value={editWord.pinyin}
-            />
-          </Form.Item>
-          <Form.Item
-            label="Nghĩa"
-            validateStatus={editWordError ? "error" : undefined}
-          >
-            <Input
-              onChange={(event) => {
-                setEditWord((current) => ({
-                  ...current,
-                  meaning: event.target.value,
-                }));
-                setEditWordError("");
-              }}
-              onPressEnter={saveEditedWord}
-              value={editWord.meaning}
             />
           </Form.Item>
           <Form.Item
