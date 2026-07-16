@@ -420,6 +420,15 @@ export default function VocabularyClient({
     input?.focus();
   }
 
+  function focusMeaningInput(vocabItemId: string) {
+    const escapedId = window.CSS.escape(vocabItemId);
+    const input = document.querySelector<HTMLInputElement>(
+      `input[data-meaning-input-id="${escapedId}"]`,
+    );
+
+    input?.focus();
+  }
+
   function handleAnswerPressEnter(
     row: PracticeRow,
     event: KeyboardEvent<HTMLInputElement>,
@@ -435,6 +444,23 @@ export default function VocabularyClient({
     }
 
     window.requestAnimationFrame(() => focusAnswerInput(nextRow.id));
+  }
+
+  function handleMeaningPressEnter(
+    row: PracticeRow,
+    event: KeyboardEvent<HTMLInputElement>,
+  ) {
+    event.preventDefault();
+
+    const currentIndex = filteredRows.findIndex((item) => item.id === row.id);
+    const nextRow = filteredRows[currentIndex + 1];
+
+    if (!nextRow) {
+      void saveMeaning(row);
+      return;
+    }
+
+    window.requestAnimationFrame(() => focusMeaningInput(nextRow.id));
   }
 
   function updateMeaning(id: string, value: string) {
@@ -851,8 +877,9 @@ export default function VocabularyClient({
             onFocus={() => {
               meaningBeforeEditRef.current[row.id] = row.meaning;
             }}
-            onPressEnter={() => saveMeaning(row)}
+            onPressEnter={(event) => handleMeaningPressEnter(row, event)}
             placeholder="Nhập nghĩa"
+            data-meaning-input-id={row.id}
             value={row.meaning}
           />
         ) : (
