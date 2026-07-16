@@ -61,10 +61,17 @@ create table if not exists public.vocab_share_settings (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.vocab_rules_notes (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  content text not null default '',
+  updated_at timestamptz not null default now()
+);
+
 alter table public.vocab_lessons enable row level security;
 alter table public.vocab_items enable row level security;
 alter table public.vocab_review_answers enable row level security;
 alter table public.vocab_share_settings enable row level security;
+alter table public.vocab_rules_notes enable row level security;
 
 drop policy if exists "Users manage own lessons" on public.vocab_lessons;
 create policy "Users manage own lessons"
@@ -133,6 +140,13 @@ create policy "Anyone reads public share settings"
 on public.vocab_share_settings
 for select
 using (is_public);
+
+drop policy if exists "Users manage own rules notes" on public.vocab_rules_notes;
+create policy "Users manage own rules notes"
+on public.vocab_rules_notes
+for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
 
 create index if not exists vocab_lessons_user_created_idx
 on public.vocab_lessons (user_id, created_at);

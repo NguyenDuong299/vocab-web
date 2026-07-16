@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  FileTextOutlined,
   HolderOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -30,6 +31,11 @@ const navItems = [
     icon: <ReadOutlined />,
     label: "Từ điển",
   },
+  {
+    key: "/rules",
+    icon: <FileTextOutlined />,
+    label: "Quy tắc",
+  },
 ];
 
 export type SidebarLesson = {
@@ -41,6 +47,7 @@ export type SidebarLesson = {
 
 function getSelectedKey(pathname: string) {
   if (pathname.startsWith("/dictionary")) return "/dictionary";
+  if (pathname.startsWith("/rules")) return "/rules";
 
   return "/vocabulary";
 }
