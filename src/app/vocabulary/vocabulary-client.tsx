@@ -54,7 +54,7 @@ function normalizeAnswer(value: string) {
 
 function isInteractiveTarget(target: EventTarget | null) {
   return (
-    target instanceof HTMLElement &&
+    target instanceof Element &&
     Boolean(
       target.closest(
         'a,button,input,textarea,select,[contenteditable="true"],[role="button"]',
@@ -731,7 +731,10 @@ export default function VocabularyClient({
           <Button
             className="grid! size-8! place-items-center! rounded-full! border-sky-100! bg-sky-50! text-sky-600! shadow-sm transition! hover:border-sky-200! hover:bg-sky-100! hover:text-sky-700!"
             icon={<SoundOutlined />}
-            onClick={() => playAudio(row.hanzi)}
+            onClick={(event) => {
+              event.stopPropagation();
+              playAudio(row.hanzi);
+            }}
             aria-label={`Nghe phát âm từ số ${row.rowNumber}`}
             size="small"
           />
