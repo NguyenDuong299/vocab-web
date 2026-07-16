@@ -17,7 +17,13 @@ import {
   SearchOutlined,
   SoundOutlined,
 } from "@ant-design/icons";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import {
   Alert,
   Button,
@@ -403,6 +409,32 @@ export default function VocabularyClient({
     }
 
     setPracticeError("");
+  }
+
+  function focusAnswerInput(vocabItemId: string) {
+    const escapedId = window.CSS.escape(vocabItemId);
+    const input = document.querySelector<HTMLInputElement>(
+      `input[data-answer-input-id="${escapedId}"]`,
+    );
+
+    input?.focus();
+  }
+
+  function handleAnswerPressEnter(
+    row: PracticeRow,
+    event: KeyboardEvent<HTMLInputElement>,
+  ) {
+    event.preventDefault();
+
+    const currentIndex = filteredRows.findIndex((item) => item.id === row.id);
+    const nextRow = filteredRows[currentIndex + 1];
+
+    if (!nextRow) {
+      void saveAnswer(row);
+      return;
+    }
+
+    window.requestAnimationFrame(() => focusAnswerInput(nextRow.id));
   }
 
   function updateMeaning(id: string, value: string) {
@@ -867,8 +899,9 @@ export default function VocabularyClient({
               value={row.answer}
               onChange={(event) => updateAnswer(row.id, event.target.value)}
               onBlur={() => saveAnswer(row)}
-              onPressEnter={() => saveAnswer(row)}
+              onPressEnter={(event) => handleAnswerPressEnter(row, event)}
               aria-label={`Luyện tập từ số ${row.rowNumber}`}
+              data-answer-input-id={row.id}
               status={row.isBlank || row.isCorrect ? undefined : "error"}
               className={
                 row.isBlank
