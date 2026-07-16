@@ -87,6 +87,8 @@ const emptyAnswers: Record<string, string> = {};
 const emptyVocabItems: Lesson["vocabItems"] = [];
 const FOCUS_NEW_WORD_HANZI_KEY = "vocab-web:focus-new-word-hanzi";
 const NEW_WORD_HANZI_INPUT_ID = "new-word-hanzi-input";
+const DRAG_SCROLL_EDGE_SIZE = 96;
+const DRAG_SCROLL_MAX_SPEED = 18;
 
 type PracticeRow = Lesson["vocabItems"][number] & {
   answer: string;
@@ -123,6 +125,7 @@ export default function VocabularyClient({
   const meaningBeforeEditRef = useRef<Record<string, string>>({});
   const savingMeaningVocabItemIdRef = useRef("");
   const didDragVocabItemRef = useRef(false);
+  const dragPointerYRef = useRef<number | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>(initialLessons);
   const [activeLessonId, setActiveLessonId] = useState(
     resolveInitialLessonId(initialLessons, initialActiveLessonId),
@@ -237,6 +240,52 @@ export default function VocabularyClient({
       }
     };
   }, [newWord.hanzi, resolvedActiveLessonId, vocabItems.length]);
+
+  useEffect(() => {
+    if (!draggedVocabItemId) return;
+
+    let frameId = 0;
+
+    const scrollWhileDragging = () => {
+      const pointerY = dragPointerYRef.current;
+
+      if (pointerY !== null) {
+        const viewportHeight = window.innerHeight;
+        const topDistance = Math.max(pointerY, 0);
+        const bottomDistance = Math.max(viewportHeight - pointerY, 0);
+        let scrollDelta = 0;
+
+        if (topDistance < DRAG_SCROLL_EDGE_SIZE) {
+          scrollDelta =
+            -((DRAG_SCROLL_EDGE_SIZE - topDistance) / DRAG_SCROLL_EDGE_SIZE) *
+            DRAG_SCROLL_MAX_SPEED;
+        } else if (bottomDistance < DRAG_SCROLL_EDGE_SIZE) {
+          scrollDelta =
+            ((DRAG_SCROLL_EDGE_SIZE - bottomDistance) / DRAG_SCROLL_EDGE_SIZE) *
+            DRAG_SCROLL_MAX_SPEED;
+        }
+
+        if (scrollDelta !== 0) {
+          window.scrollBy({ top: scrollDelta });
+        }
+      }
+
+      frameId = window.requestAnimationFrame(scrollWhileDragging);
+    };
+
+    const trackDragPointer = (event: DragEvent) => {
+      dragPointerYRef.current = event.clientY;
+    };
+
+    window.addEventListener("dragover", trackDragPointer);
+    frameId = window.requestAnimationFrame(scrollWhileDragging);
+
+    return () => {
+      window.removeEventListener("dragover", trackDragPointer);
+      window.cancelAnimationFrame(frameId);
+      dragPointerYRef.current = null;
+    };
+  }, [draggedVocabItemId]);
 
   const rows = useMemo(
     () =>
