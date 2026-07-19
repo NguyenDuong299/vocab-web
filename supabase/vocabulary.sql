@@ -67,11 +67,24 @@ create table if not exists public.vocab_rules_notes (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.vocab_opposite_pairs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  left_text text not null,
+  right_text text not null,
+  pinyin text not null,
+  meaning text not null,
+  position integer not null default 0,
+  created_at timestamptz not null default now(),
+  unique (user_id, left_text, right_text)
+);
+
 alter table public.vocab_lessons enable row level security;
 alter table public.vocab_items enable row level security;
 alter table public.vocab_review_answers enable row level security;
 alter table public.vocab_share_settings enable row level security;
 alter table public.vocab_rules_notes enable row level security;
+alter table public.vocab_opposite_pairs enable row level security;
 
 drop policy if exists "Users manage own lessons" on public.vocab_lessons;
 create policy "Users manage own lessons"
@@ -148,6 +161,13 @@ for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage own opposite pairs" on public.vocab_opposite_pairs;
+create policy "Users manage own opposite pairs"
+on public.vocab_opposite_pairs
+for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
 create index if not exists vocab_lessons_user_created_idx
 on public.vocab_lessons (user_id, created_at);
 
@@ -163,3 +183,6 @@ on public.vocab_review_answers (user_id, vocab_item_id);
 create index if not exists vocab_share_settings_public_idx
 on public.vocab_share_settings (public_id)
 where is_public;
+
+create index if not exists vocab_opposite_pairs_user_position_idx
+on public.vocab_opposite_pairs (user_id, position, created_at);

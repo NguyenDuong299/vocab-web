@@ -7,6 +7,7 @@ import {
   MenuUnfoldOutlined,
   PlusOutlined,
   ReadOutlined,
+  SwapOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
 import { Button, Input, Layout, Modal, Tooltip, Typography } from "antd";
@@ -36,6 +37,11 @@ const navItems = [
     icon: <FileTextOutlined />,
     label: "Quy tắc",
   },
+  {
+    key: "/opposites",
+    icon: <SwapOutlined />,
+    label: "Từ đối lập",
+  },
 ];
 
 export type SidebarLesson = {
@@ -48,6 +54,7 @@ export type SidebarLesson = {
 function getSelectedKey(pathname: string) {
   if (pathname.startsWith("/dictionary")) return "/dictionary";
   if (pathname.startsWith("/rules")) return "/rules";
+  if (pathname.startsWith("/opposites")) return "/opposites";
 
   return "/vocabulary";
 }
