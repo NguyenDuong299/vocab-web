@@ -4,6 +4,7 @@ import {
   DeleteOutlined,
   EditOutlined,
   PlusOutlined,
+  ReloadOutlined,
   SearchOutlined,
   SwapOutlined,
 } from "@ant-design/icons";
@@ -49,6 +50,13 @@ type EditPairDraft = PairDraft & {
 
 type OppositePairRow = OppositePair & {
   rowNumber: number;
+};
+
+type QuizQuestion = {
+  pairId: string;
+  prompt: string;
+  answer: string;
+  options: string[];
 };
 
 const pairSeparator = " ↔ ";
@@ -106,6 +114,41 @@ function generateTermPinyin(text: string) {
   if (!cleanText) return "";
 
   return pinyin(cleanText);
+}
+
+function shuffleValues<T>(values: T[]) {
+  const nextValues = [...values];
+
+  for (let index = nextValues.length - 1; index > 0; index -= 1) {
+    const targetIndex = Math.floor(Math.random() * (index + 1));
+    [nextValues[index], nextValues[targetIndex]] = [
+      nextValues[targetIndex],
+      nextValues[index],
+    ];
+  }
+
+  return nextValues;
+}
+
+function createQuizQuestion(pairs: OppositePair[]): QuizQuestion | null {
+  if (pairs.length === 0) return null;
+
+  const sourcePair = pairs[Math.floor(Math.random() * pairs.length)];
+  const asksLeftSide = Math.random() < 0.5;
+  const prompt = asksLeftSide ? sourcePair.leftText : sourcePair.rightText;
+  const answer = asksLeftSide ? sourcePair.rightText : sourcePair.leftText;
+  const distractors = pairs
+    .flatMap((pair) => [pair.leftText, pair.rightText])
+    .filter((value) => value && value !== prompt && value !== answer);
+  const uniqueDistractors = Array.from(new Set(shuffleValues(distractors)));
+  const options = shuffleValues([answer, ...uniqueDistractors.slice(0, 3)]);
+
+  return {
+    pairId: sourcePair.id,
+    prompt,
+    answer,
+    options,
+  };
 }
 
 function OppositeValue({
@@ -167,6 +210,12 @@ export default function OppositesClient({
   const [search, setSearch] = useState("");
   const [formError, setFormError] = useState("");
   const [editError, setEditError] = useState("");
+  const [quizQuestion, setQuizQuestion] = useState<QuizQuestion | null>(() =>
+    createQuizQuestion(initialOppositePairs),
+  );
+  const [selectedQuizAnswer, setSelectedQuizAnswer] = useState("");
+  const [quizStats, setQuizStats] = useState({ correct: 0, total: 0 });
+  const [isQuizOpen, setIsQuizOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [deletingPairId, setDeletingPairId] = useState("");
@@ -202,6 +251,32 @@ export default function OppositesClient({
       ].some((value) => value.toLowerCase().includes(keyword)),
     );
   }, [rows, search]);
+  const selectedQuizIsCorrect =
+    Boolean(selectedQuizAnswer && quizQuestion) &&
+    selectedQuizAnswer === quizQuestion?.answer;
+
+  function startNextQuizQuestion(nextPairs = oppositePairs) {
+    setQuizQuestion(createQuizQuestion(nextPairs));
+    setSelectedQuizAnswer("");
+  }
+
+  function chooseQuizAnswer(answer: string) {
+    if (!quizQuestion || selectedQuizAnswer) return;
+
+    setSelectedQuizAnswer(answer);
+    setQuizStats((current) => ({
+      correct: current.correct + (answer === quizQuestion.answer ? 1 : 0),
+      total: current.total + 1,
+    }));
+  }
+
+  function openQuiz() {
+    if (!quizQuestion) {
+      startNextQuizQuestion();
+    }
+
+    setIsQuizOpen(true);
+  }
 
   async function addPair() {
     if (isAdding) return;
@@ -234,13 +309,18 @@ export default function OppositesClient({
       return;
     }
 
-    setOppositePairs((current) => [...current, result.data]);
+    const nextPairs = [...oppositePairs, result.data];
+
+    setOppositePairs(nextPairs);
     setNewPair({
       leftText: "",
       rightText: "",
       leftMeaning: "",
       rightMeaning: "",
     });
+    if (!quizQuestion) {
+      startNextQuizQuestion(nextPairs);
+    }
     router.refresh();
   }
 
@@ -316,9 +396,14 @@ export default function OppositesClient({
       return;
     }
 
-    setOppositePairs((current) =>
-      current.map((pair) => (pair.id === result.data.id ? result.data : pair)),
+    const nextPairs = oppositePairs.map((pair) =>
+      pair.id === result.data.id ? result.data : pair,
     );
+
+    setOppositePairs(nextPairs);
+    if (quizQuestion?.pairId === result.data.id) {
+      startNextQuizQuestion(nextPairs);
+    }
     closeEditModal();
     router.refresh();
   }
@@ -343,12 +428,18 @@ export default function OppositesClient({
       return;
     }
 
-    setOppositePairs((current) =>
-      current.filter((item) => item.id !== result.data.id),
+    const nextPairs = oppositePairs.filter(
+      (item) => item.id !== result.data.id,
     );
+
+    setOppositePairs(nextPairs);
 
     if (editingPair?.id === pair.id) {
       closeEditModal();
+    }
+
+    if (quizQuestion?.pairId === pair.id || nextPairs.length === 0) {
+      startNextQuizQuestion(nextPairs);
     }
 
     router.refresh();
@@ -452,9 +543,18 @@ export default function OppositesClient({
                 Lưu các cặp trái nghĩa để ôn theo trục nghĩa và nhớ nhanh hơn.
               </Typography.Text>
             </div>
-            <div className="flex h-10 items-center gap-2 rounded-lg bg-sky-50 px-3 text-sm font-semibold text-sky-700">
-              <SwapOutlined />
-              {oppositePairs.length} cặp
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={openQuiz}
+                type="primary"
+              >
+                Luyện quiz
+              </Button>
+              <div className="flex h-10 items-center gap-2 rounded-lg bg-sky-50 px-3 text-sm font-semibold text-sky-700">
+                <SwapOutlined />
+                {oppositePairs.length} cặp
+              </div>
             </div>
           </div>
         </Card>
@@ -607,6 +707,92 @@ export default function OppositesClient({
           )}
         />
       </Space>
+
+      <Modal
+        footer={null}
+        onCancel={() => setIsQuizOpen(false)}
+        open={isQuizOpen}
+        title="Quiz trái nghĩa"
+        width={760}
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <Typography.Text className="text-slate-500">
+              Chọn từ trái nghĩa đúng. Câu hỏi lấy ngẫu nhiên từ hai vế trong
+              bảng.
+            </Typography.Text>
+            <div className="shrink-0 rounded-lg bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600 ring-1 ring-slate-200">
+              {quizStats.correct}/{quizStats.total} đúng
+            </div>
+          </div>
+
+          {quizQuestion ? (
+            <div className="grid gap-4 lg:grid-cols-[minmax(220px,0.7fr)_minmax(0,1fr)] lg:items-stretch">
+              <div className="flex min-h-40 flex-col items-center justify-center rounded-lg border border-sky-100 bg-sky-50 p-5 text-center">
+                <Typography.Text className="text-sm font-semibold uppercase text-sky-600">
+                  Từ cần tìm trái nghĩa
+                </Typography.Text>
+                <div className="mt-3 text-4xl text-slate-950">
+                  {quizQuestion.prompt}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {quizQuestion.options.map((option) => {
+                    const isSelected = selectedQuizAnswer === option;
+                    const isCorrect = option === quizQuestion.answer;
+                    const shouldShowCorrect =
+                      Boolean(selectedQuizAnswer) && isCorrect;
+                    const shouldShowWrong =
+                      Boolean(selectedQuizAnswer) && isSelected && !isCorrect;
+
+                    return (
+                      <Button
+                        className={`h-12! justify-start! text-left! text-lg! ${
+                          shouldShowCorrect
+                            ? "border-emerald-300! bg-emerald-50! text-emerald-700!"
+                            : shouldShowWrong
+                              ? "border-red-300! bg-red-50! text-red-700!"
+                              : ""
+                        }`}
+                        disabled={Boolean(selectedQuizAnswer)}
+                        key={option}
+                        onClick={() => chooseQuizAnswer(option)}
+                      >
+                        {option}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                {selectedQuizAnswer ? (
+                  <Alert
+                    showIcon
+                    title={
+                      selectedQuizIsCorrect
+                        ? "Chính xác."
+                        : `Đáp án đúng là ${quizQuestion.answer}.`
+                    }
+                    type={selectedQuizIsCorrect ? "success" : "error"}
+                  />
+                ) : null}
+
+                <div className="flex justify-end">
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={() => startNextQuizQuestion()}
+                  >
+                    Câu khác
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <Empty description="Thêm ít nhất một cặp từ trái nghĩa để bắt đầu quiz." />
+          )}
+        </div>
+      </Modal>
 
       <Modal
         confirmLoading={isSavingEdit}
