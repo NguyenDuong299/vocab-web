@@ -56,6 +56,10 @@ type QuizQuestion = {
   pairId: string;
   prompt: string;
   answer: string;
+  leftText: string;
+  rightText: string;
+  leftMeaning: string;
+  rightMeaning: string;
   options: string[];
 };
 
@@ -134,6 +138,7 @@ function createQuizQuestion(pairs: OppositePair[]): QuizQuestion | null {
   if (pairs.length === 0) return null;
 
   const sourcePair = pairs[Math.floor(Math.random() * pairs.length)];
+  const meaning = splitMeaning(sourcePair.meaning);
   const asksLeftSide = Math.random() < 0.5;
   const prompt = asksLeftSide ? sourcePair.leftText : sourcePair.rightText;
   const answer = asksLeftSide ? sourcePair.rightText : sourcePair.leftText;
@@ -147,6 +152,10 @@ function createQuizQuestion(pairs: OppositePair[]): QuizQuestion | null {
     pairId: sourcePair.id,
     prompt,
     answer,
+    leftText: sourcePair.leftText,
+    rightText: sourcePair.rightText,
+    leftMeaning: meaning.leftMeaning,
+    rightMeaning: meaning.rightMeaning,
     options,
   };
 }
@@ -768,6 +777,22 @@ export default function OppositesClient({
 
                 {selectedQuizAnswer ? (
                   <Alert
+                    description={
+                      <div className="space-y-1">
+                        <div>
+                          {formatPair(
+                            quizQuestion.leftText,
+                            quizQuestion.rightText,
+                          )}
+                        </div>
+                        <div>
+                          {formatMeaning(
+                            quizQuestion.leftMeaning,
+                            quizQuestion.rightMeaning,
+                          )}
+                        </div>
+                      </div>
+                    }
                     showIcon
                     title={
                       selectedQuizIsCorrect
