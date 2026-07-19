@@ -113,10 +113,8 @@ export default function DictionaryClient({ initialLessons, initialReviewByItem }
       align: "center",
       render: (value: string, row) => (
         <div className="flex w-full items-center justify-between gap-2">
-          <span className="min-w-0 flex-1 text-center">
-          <Typography.Text className="text-xl" strong>
+          <span className="min-w-0 flex-1 truncate text-center text-2xl text-slate-950">
             {value}
-          </Typography.Text>
           </span>
           <Button
             className="grid! size-8! place-items-center! rounded-full! border-sky-100! bg-sky-50! text-sky-600! shadow-sm transition! hover:border-sky-200! hover:bg-sky-100! hover:text-sky-700!"

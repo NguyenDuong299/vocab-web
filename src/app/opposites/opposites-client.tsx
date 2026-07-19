@@ -121,7 +121,7 @@ function OppositeValue({
     <span className="inline-flex max-w-full items-center gap-2 text-slate-800">
       <span
         className={`min-w-0 truncate ${
-          size === "large" ? "text-xl font-semibold" : "text-base"
+          size === "large" ? "text-2xl" : "text-base"
         }`}
       >
         {leftValue || "-"}
@@ -135,7 +135,7 @@ function OppositeValue({
       </span>
       <span
         className={`min-w-0 truncate ${
-          size === "large" ? "text-xl font-semibold" : "text-base"
+          size === "large" ? "text-2xl" : "text-base"
         }`}
       >
         {rightValue || "-"}
