@@ -1,7 +1,16 @@
 "use client";
 
 import { BookOutlined, RightOutlined, SearchOutlined } from "@ant-design/icons";
-import { Card, Col, Empty, Input, Row, Space, Statistic, Typography } from "antd";
+import {
+  Card,
+  Col,
+  Empty,
+  Input,
+  Row,
+  Space,
+  Statistic,
+  Typography,
+} from "antd";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -34,9 +43,7 @@ export default function PublicShareClient({
     if (!keyword) return initialLessons;
 
     return initialLessons.filter((lesson) =>
-      [lesson.title, lesson.topic].some((value) =>
-        value.toLowerCase().includes(keyword),
-      ),
+      lesson.title.toLowerCase().includes(keyword),
     );
   }, [initialLessons, query]);
 
@@ -53,8 +60,7 @@ export default function PublicShareClient({
                 Danh sách bài học
               </Typography.Title>
               <Typography.Text type="secondary">
-                Chọn một bài để xem từ vựng. Nội dung chỉ đọc, không thể thêm,
-                sửa, xóa hoặc luyện tập.
+                Chọn một bài để xem từ vựng.
               </Typography.Text>
             </Col>
             <Col xs={24} lg={12}>
@@ -70,11 +76,14 @@ export default function PublicShareClient({
           </Row>
         </Card>
 
-        <Card className="border border-slate-200 shadow-sm" styles={{ body: { padding: 16 } }}>
+        <Card
+          className="border border-slate-200 shadow-sm"
+          styles={{ body: { padding: 16 } }}
+        >
           <Input
             allowClear
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Tìm tên bài hoặc chủ đề"
+            placeholder="Tìm tên bài"
             prefix={<SearchOutlined />}
             size="large"
             value={query}
@@ -104,9 +113,6 @@ export default function PublicShareClient({
                         >
                           {lesson.title}
                         </Typography.Title>
-                        <Typography.Text type="secondary" className="block">
-                          {lesson.topic}
-                        </Typography.Text>
                         <span className="mt-4 inline-flex rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-600">
                           {lesson.wordCount} từ
                         </span>
