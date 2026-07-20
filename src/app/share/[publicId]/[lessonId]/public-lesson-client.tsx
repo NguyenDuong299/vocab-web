@@ -1,9 +1,7 @@
 "use client";
 
-import { ArrowLeftOutlined, SearchOutlined, SoundOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, SearchOutlined } from "@ant-design/icons";
 import {
-  Alert,
-  Button,
   Card,
   Empty,
   Input,
@@ -47,7 +45,6 @@ export default function PublicLessonClient({
   publicId: string;
 }) {
   const [query, setQuery] = useState("");
-  const [audioError, setAudioError] = useState("");
 
   const rows = useMemo(
     () =>
@@ -70,22 +67,6 @@ export default function PublicLessonClient({
     );
   }, [query, rows]);
 
-  function playAudio(text: string) {
-    if (!("speechSynthesis" in window)) {
-      setAudioError("Trình duyệt không hỗ trợ phát âm tự động.");
-      return;
-    }
-
-    window.speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "zh-CN";
-    utterance.rate = 0.85;
-
-    window.speechSynthesis.speak(utterance);
-    setAudioError("");
-  }
-
   const columns: TableColumnsType<PublicLessonRow> = [
     {
       title: "STT",
@@ -98,21 +79,8 @@ export default function PublicLessonClient({
       dataIndex: "hanzi",
       width: 148,
       align: "center",
-      render: (value: string, row) => (
-        <div className="flex w-full items-center justify-between gap-2">
-          <span className="min-w-0 flex-1 text-center">
-            <Typography.Text className="text-xl" strong>
-              {value}
-            </Typography.Text>
-          </span>
-          <Button
-            className="grid! size-8! place-items-center! rounded-full! border-sky-100! bg-sky-50! text-sky-600! shadow-sm transition! hover:border-sky-200! hover:bg-sky-100! hover:text-sky-700!"
-            icon={<SoundOutlined />}
-            onClick={() => playAudio(row.hanzi)}
-            aria-label={`Nghe phát âm ${row.hanzi}`}
-            size="small"
-          />
-        </div>
+      render: (value: string) => (
+        <Typography.Text className="text-2xl!">{value}</Typography.Text>
       ),
     },
     {
@@ -120,7 +88,9 @@ export default function PublicLessonClient({
       dataIndex: "pinyin",
       width: 140,
       align: "center",
-      render: (value: string) => <Typography.Text code>{value}</Typography.Text>,
+      render: (value: string) => (
+        <Typography.Text code>{value}</Typography.Text>
+      ),
     },
     {
       title: "NGHĨA",
@@ -167,9 +137,6 @@ export default function PublicLessonClient({
                 size="large"
                 value={query}
               />
-              {audioError ? (
-                <Alert className="mt-3" type="error" title={audioError} showIcon />
-              ) : null}
             </div>
           </div>
         </Card>

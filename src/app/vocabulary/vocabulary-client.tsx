@@ -855,7 +855,7 @@ export default function VocabularyClient({
       align: "center",
       render: (value: string) =>
         showPinyin ? (
-          <Typography.Text className="block whitespace-normal break-words leading-6">
+          <Typography.Text className="block whitespace-normal wrap-break-word leading-6">
             {value}
           </Typography.Text>
         ) : (
@@ -1243,7 +1243,7 @@ export default function VocabularyClient({
                     <Form.Item label="Pinyin tự sinh">
                       <div
                         aria-live="polite"
-                        className="min-h-8 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 leading-6 text-slate-700 whitespace-normal break-words"
+                        className="min-h-8 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 leading-6 text-slate-700 whitespace-normal wrap-break-word"
                       >
                         {generatedPinyin || "-"}
                       </div>
