@@ -1,6 +1,11 @@
 "use client";
 
-import { BookOutlined, RightOutlined, SearchOutlined } from "@ant-design/icons";
+import {
+  BookOutlined,
+  RightOutlined,
+  SearchOutlined,
+  SwapOutlined,
+} from "@ant-design/icons";
 import {
   Card,
   Col,
@@ -27,9 +32,11 @@ function normalizeSearch(value: string) {
 
 export default function PublicShareClient({
   initialLessons,
+  initialOppositePairCount,
   publicId,
 }: {
   initialLessons: PublicLesson[];
+  initialOppositePairCount: number;
   publicId: string;
 }) {
   const [query, setQuery] = useState("");
@@ -46,6 +53,13 @@ export default function PublicShareClient({
       lesson.title.toLowerCase().includes(keyword),
     );
   }, [initialLessons, query]);
+  const showOppositeItem = useMemo(() => {
+    const keyword = normalizeSearch(query);
+
+    if (!keyword) return true;
+
+    return "từ đối lập tu doi lap trái nghĩa trai nghia".includes(keyword);
+  }, [query]);
 
   return (
     <main className="min-h-screen bg-[#f8fafc] p-4 sm:p-6">
@@ -71,6 +85,12 @@ export default function PublicShareClient({
                 <Col xs={12}>
                   <Statistic title="Tổng từ" value={totalWords} />
                 </Col>
+                <Col xs={12}>
+                  <Statistic
+                    title="Từ đối lập"
+                    value={initialOppositePairCount}
+                  />
+                </Col>
               </Row>
             </Col>
           </Row>
@@ -90,8 +110,39 @@ export default function PublicShareClient({
           />
         </Card>
 
-        {filteredLessons.length > 0 ? (
+        {filteredLessons.length > 0 || showOppositeItem ? (
           <Row gutter={[16, 16]}>
+            {showOppositeItem ? (
+              <Col xs={24} md={12} xl={8}>
+                <Link
+                  className="group block h-full"
+                  href={`/share/${publicId}/opposites`}
+                >
+                  <Card
+                    className="h-full border border-slate-200 shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+                    styles={{ body: { padding: 18 } }}
+                  >
+                    <div className="flex h-full items-start gap-4">
+                      <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-emerald-50 text-xl text-emerald-600 ring-1 ring-emerald-100">
+                        <SwapOutlined />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <Typography.Title
+                          level={4}
+                          className="mb-1! line-clamp-2 text-slate-950!"
+                        >
+                          Từ đối lập
+                        </Typography.Title>
+                        <span className="mt-4 inline-flex rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-600">
+                          {initialOppositePairCount} cặp từ
+                        </span>
+                      </div>
+                      <RightOutlined className="mt-2 text-slate-300 transition group-hover:text-emerald-500" />
+                    </div>
+                  </Card>
+                </Link>
+              </Col>
+            ) : null}
             {filteredLessons.map((lesson) => (
               <Col key={lesson.id} xs={24} md={12} xl={8}>
                 <Link

@@ -168,6 +168,19 @@ for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
+drop policy if exists "Anyone reads public opposite pairs" on public.vocab_opposite_pairs;
+create policy "Anyone reads public opposite pairs"
+on public.vocab_opposite_pairs
+for select
+using (
+  exists (
+    select 1
+    from public.vocab_share_settings
+    where vocab_share_settings.user_id = vocab_opposite_pairs.user_id
+      and vocab_share_settings.is_public
+  )
+);
+
 create index if not exists vocab_lessons_user_created_idx
 on public.vocab_lessons (user_id, created_at);
 

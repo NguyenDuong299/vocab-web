@@ -45,24 +45,38 @@ export default async function PublicSharePage({
     notFound();
   }
 
-  const { data, error } = await supabase
+  const { data: lessonsData, error: lessonsError } = await supabase
     .from("vocab_lessons")
     .select("id,title,topic,position,vocab_items(id)")
     .eq("user_id", shareSettings.user_id)
     .order("position", { ascending: true })
     .order("created_at", { ascending: true });
 
-  if (error) {
+  if (lessonsError) {
     return (
       <main className="min-h-screen bg-[#f8fafc] p-4 sm:p-6">
-        Không tải được dữ liệu công khai: {error.message}
+        Không tải được dữ liệu công khai: {lessonsError.message}
+      </main>
+    );
+  }
+
+  const { count: oppositePairCount, error: oppositePairsError } = await supabase
+    .from("vocab_opposite_pairs")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", shareSettings.user_id);
+
+  if (oppositePairsError) {
+    return (
+      <main className="min-h-screen bg-[#f8fafc] p-4 sm:p-6">
+        Không tải được từ đối lập công khai: {oppositePairsError.message}
       </main>
     );
   }
 
   return (
     <PublicShareClient
-      initialLessons={((data ?? []) as LessonRow[]).map(mapLesson)}
+      initialLessons={((lessonsData ?? []) as LessonRow[]).map(mapLesson)}
+      initialOppositePairCount={oppositePairCount ?? 0}
       publicId={publicId}
     />
   );
